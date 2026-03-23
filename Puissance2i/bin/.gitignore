@@ -1,0 +1,4 @@
+# Ignorer tous les fichiers du dossier bin (les exécutables générés)
+*
+# ... Sauf le fichier .gitignore lui-même
+!.gitignore

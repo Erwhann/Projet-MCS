@@ -1,7 +1,12 @@
-# Projet-MCS
+# Puissance2i (Projet MCS)
+
+Puissance2i est un jeu et une application d'architecture client-serveur (développé en C). Il intègre des fonctionnalités réseaux et sociales avancées telles que le matchmaking, la gestion du score ELO, un système d'amis et l'organisation de tournois.
 
 ## Architecture
 
+Le code source est séparé selon la structure logique suivante :
+
+```text
 Puissance2i/
 │
 ├── serveur/
@@ -26,3 +31,42 @@ Puissance2i/
 ├── commun/
 │   ├── protocol.h
 │   ├── structures.h
+```
+
+## Compilation
+
+Un `Makefile` est fourni dans le dossier `Puissance2i/` pour automatiser la compilation du client et du serveur.
+
+```bash
+cd Puissance2i
+make
+```
+
+Les exécutables générés se trouveront dans le répertoire `bin/`.
+
+### Options de compilation :
+- `make` : Compile tout le projet (serveur + client).
+- `make clean` : Supprime les fichiers objets intermédiaires (`.o`).
+
+## Exécution
+
+Le projet nécessitant deux entités pour fonctionner en réseau, vous devez d'abord lancer le serveur, puis connecter les clients.
+
+### 1. Démarrer le Serveur
+
+Démarrez le serveur dans votre terminal principal :
+
+```bash
+cd Puissance2i
+./bin/serveur
+```
+
+### 2. Démarrer un ou plusieurs Clients
+
+Dans d'autres terminaux, lancez le programme client pour vous connecter au serveur :
+
+```bash
+cd Puissance2i
+# l'adresse est configurable :
+./bin/client [IP_ADDRESS] 8080
+```
