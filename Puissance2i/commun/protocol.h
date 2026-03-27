@@ -24,6 +24,9 @@ typedef enum {
     RES_CHALLENGE_ACCEPT = 46,
     REQ_JOIN_TOURNAMENT = 50,
     PUSH_TOURNAMENT_STATE = 51,
+    REQ_CHANGE_STATE = 60,   /* Changer statut social (en ligne/occupe/absent) */
+    PUSH_CHOOSE_ELO  = 61,   /* Serveur demande si partie classee (challenge) */
+    REQ_SET_ELO_MODE = 62,   /* Client repond : 1=avec ELO, 0=partie amicale  */
     RES_ERROR_STATE = 99
 } TypeMessage;
 

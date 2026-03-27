@@ -41,22 +41,24 @@ void construire_liste_amis(ClientInfo *client, ClientInfo *clients_global, int n
 
     for (int i = 0; i < client->nb_amis; i++) {
         int id_ami = client->amis[i];
-        /* Chercher cet ID dans les clients actifs */
         int en_ligne = 0;
         char pseudo[32] = "???";
         int elo = 0;
+        int statut = SOCIAL_ABSENT;
         for (int j = 0; j < nb_max; j++) {
             if (clients_global[j].socket != 0 && clients_global[j].id == id_ami) {
                 en_ligne = 1;
                 strncpy(pseudo, clients_global[j].pseudo, 31);
-                elo = clients_global[j].elo;
+                elo    = clients_global[j].elo;
+                statut = (int)clients_global[j].etat_social;
                 break;
             }
         }
         int k = out->nb_amis;
-        out->ids[k] = id_ami;
+        out->ids[k]    = id_ami;
         out->en_ligne[k] = en_ligne;
-        out->elo[k] = elo;
+        out->elo[k]    = elo;
+        out->statut[k] = statut;
         strncpy(out->pseudos[k], pseudo, 31);
         out->pseudos[k][31] = '\0';
         out->nb_amis++;

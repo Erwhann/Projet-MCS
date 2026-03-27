@@ -1,5 +1,6 @@
 /* =========================================================
- * ihm.h -- Interface NCURSES (couleurs) pour le client Puissance 2i
+ * ihm.h -- Interface NCURSES pour le client Puissance 2i
+ * Aucun accent dans les chaines de caracteres.
  * ========================================================= */
 #ifndef IHM_H
 #define IHM_H
@@ -8,23 +9,25 @@
 #include "../commun/structures.h"
 #include <ncurses.h>
 
-/* --- Initialisation / arrêt --- */
+/* --- Init / arret --- */
 void init_ihm(void);
 void fin_ihm(void);
 
 /* --- Saisie du pseudo (bloquante) --- */
-void demander_pseudo_ncurses(char *pseudo, const char *pseudo_suggestion);
+void demander_pseudo_ncurses(char *pseudo, const char *suggestion);
 
-/* --- Écrans --- */
+/* --- Ecrans --- */
 void dessiner_menu(const ClientInfo *moi);
-void dessiner_matchmaking(const ClientInfo *moi);
+void dessiner_matchmaking(void);
 void dessiner_partie(const ClientInfo *moi, const PartieInfo *partie, const char *msg);
 void dessiner_fin_partie(const ClientInfo *moi, int id_vainqueur, int points, int nv_elo);
 void dessiner_amis(const PayloadFriendList *liste);
 void dessiner_profil(const ClientInfo *moi);
+void dessiner_statut(int statut_actuel);
+void dessiner_choisir_elo(void);
 void dessiner_notification(const char *msg);
 
-/* --- Saisie d'une chaîne en overlay (non-bloquant) --- */
+/* --- Saisie de chaine en overlay --- */
 int saisir_chaine_overlay(const char *invite, char *buf, int maxlen);
 
 /* --- Handlers asynchrones --- */
@@ -37,13 +40,15 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
                     PayloadFriendList *amis, int *etat_ihm,
                     int *challenge_en_attente, int challenger_id, int sock);
 
-/* --- États IHM --- */
-#define IHM_MENU        0
-#define IHM_MATCHMAKING 1
-#define IHM_EN_JEU      2
-#define IHM_FIN_PARTIE  3
-#define IHM_AMIS        4
-#define IHM_PROFIL      5
+/* --- Etats IHM --- */
+#define IHM_MENU          0
+#define IHM_MATCHMAKING   1
+#define IHM_EN_JEU        2
+#define IHM_FIN_PARTIE    3
+#define IHM_AMIS          4
+#define IHM_PROFIL        5
+#define IHM_STATUT        6   /* Changer statut social */
+#define IHM_CHOISIR_ELO   7   /* Choix partie classee / amicale */
 
 /* --- Paires de couleurs --- */
 #define COL_TITRE    1

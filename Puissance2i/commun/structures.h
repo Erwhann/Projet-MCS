@@ -2,11 +2,19 @@
 #define STRUCTURES_H
 
 /* =========================================================
- * structures.h -- Structures de données partagées MCS
- * Payloads réseau et modèles internes (Cahier des Charges §8)
+ * structures.h -- Structures de donnees partagees MCS
+ * Payloads reseau et modeles internes (CDC ss8)
+ * AUCUN accent dans les commentaires pour portabilite ASCII.
  * ========================================================= */
 
-/* --- Payloads réseau (échangés en binaire via data.c) --- */
+/* --- Statut social du joueur --- */
+typedef enum {
+    SOCIAL_EN_LIGNE = 0,
+    SOCIAL_OCCUPE   = 1,
+    SOCIAL_ABSENT   = 2
+} EtatSocial;
+
+/* --- Payloads reseau --- */
 
 typedef struct {
     char pseudo[32];
@@ -19,7 +27,7 @@ typedef struct {
 } PayloadLoginOK;
 
 typedef struct {
-    int code_erreur; /* 1=pseudo invalide, 2=déjà connecté */
+    int code_erreur;
 } PayloadError;
 
 typedef struct {
@@ -27,6 +35,7 @@ typedef struct {
     int id_adversaire;
     char pseudo[32];
     int elo;
+    int est_challenge; /* 1 = partie de defi direct, 0 = matchmaking */
 } PayloadMatchFound;
 
 typedef struct {
@@ -35,7 +44,7 @@ typedef struct {
 
 typedef struct {
     int grille[6][7]; /* 0=vide, id_joueur=pion */
-    int tour_de_jeu;  /* ID du joueur dont c'est le tour */
+    int tour_de_jeu;
 } PayloadGrid;
 
 typedef struct {
@@ -46,19 +55,20 @@ typedef struct {
 
 /* --- Amis --- */
 typedef struct {
-    char pseudo_ami[32]; /* Pseudo du joueur à ajouter (plus ergonomique que l'ID) */
+    char pseudo_ami[32];
 } PayloadAddFriend;
 
 typedef struct {
     int nb_amis;
     int ids[50];
     char pseudos[50][32];
-    int en_ligne[50];    /* 1=en ligne, 0=offline */
+    int en_ligne[50];      /* 1=connecte, 0=deconnecte */
     int elo[50];
+    int statut[50];        /* EtatSocial : 0=en_ligne 1=occupe 2=absent */
 } PayloadFriendList;
 
 typedef struct {
-    int id_ami_cible; /* ID de l'ami à défier */
+    int id_ami_cible;
 } PayloadChallenge;
 
 typedef struct {
@@ -68,9 +78,19 @@ typedef struct {
 } PayloadChallengeReceived;
 
 typedef struct {
-    int accepte; /* 1=accepté, 0=refusé */
+    int accepte;
     int id_challengeur;
 } PayloadChallengeResponse;
+
+/* --- Statut social --- */
+typedef struct {
+    int etat_social; /* EtatSocial */
+} PayloadChangeState;
+
+/* --- Mode ELO (partie amicale ou classee) --- */
+typedef struct {
+    int elo_impact; /* 1=partie classee, 0=partie amicale (sans ELO) */
+} PayloadSetEloMode;
 
 /* --- Profil --- */
 typedef struct {
@@ -83,7 +103,7 @@ typedef struct {
     int nb_nuls;
 } PayloadProfil;
 
-/* --- Machines à état --- */
+/* --- Machine a etats reseau client --- */
 typedef enum {
     ETAT_MENU = 0,
     ETAT_MATCHMAKING = 1,
@@ -91,7 +111,7 @@ typedef enum {
     ETAT_TOURNOI = 3
 } EtatClient;
 
-/* --- Structures internes du serveur --- */
+/* --- Structures internes serveur --- */
 #define MAX_AMIS 50
 
 typedef struct {
@@ -103,9 +123,10 @@ typedef struct {
     int nb_victoires;
     int nb_defaites;
     int nb_nuls;
-    EtatClient etat;
+    EtatClient  etat;
+    EtatSocial  etat_social;
     int id_partie_actuelle;
-    int amis[MAX_AMIS]; /* IDs des amis */
+    int amis[MAX_AMIS];
     int nb_amis;
 } ClientInfo;
 
@@ -116,6 +137,9 @@ typedef struct {
     int tour_joueur_id;
     int grille[6][7];
     int active;
+    int elo_impact;          /* 1=classee, 0=amicale */
+    int elo_mode_pending;    /* 1=attente reponse du challengeur */
+    int id_challengeur;      /* ID du joueur qui choisit le mode ELO */
 } PartieInfo;
 
 #endif /* STRUCTURES_H */
