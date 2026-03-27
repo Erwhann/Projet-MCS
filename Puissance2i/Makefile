@@ -1,37 +1,29 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -I./commun -I./reseau -g
+CC     = gcc
+CFLAGS = -Wall -Wextra -g -I./commun -I./reseau -I./serveur -I./client
 
-# Fichiers communs
-RESEAU_SRC = reseau/session.c reseau/data.c
+SRCS_SRV = serveur/serveur.c serveur/jeu.c serveur/matchmaking.c \
+           serveur/elo.c serveur/amis.c \
+           reseau/session.c reseau/data.c \
+           commun/profil.c
+OBJS_SRV = $(SRCS_SRV:.c=.o)
 
-# Serveur
-SERVEUR_SRC = serveur/serveur.c serveur/matchmaking.c serveur/elo.c serveur/tournoi.c serveur/amis.c serveur/jeu.c
-SERVEUR_OBJ = $(SERVEUR_SRC:.c=.o) $(RESEAU_SRC:.c=.o)
+SRCS_CLT = client/client.c client/ihm.c \
+           reseau/session.c reseau/data.c \
+           commun/profil.c
+OBJS_CLT = $(SRCS_CLT:.c=.o)
 
-# Client
-CLIENT_SRC = client/client.c client/ihm.c client/menu.c
-CLIENT_OBJ = $(CLIENT_SRC:.c=.o) $(RESEAU_SRC:.c=.o)
+all: bin/serveur bin/client
 
-# Executables
-EXEC_SERVEUR = bin/serveur
-EXEC_CLIENT = bin/client
+bin/serveur: $(OBJS_SRV)
+	@mkdir -p bin
+	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-all: bin_dir $(EXEC_SERVEUR) $(EXEC_CLIENT)
-
-bin_dir:
-	mkdir -p bin
-
-$(EXEC_SERVEUR): $(SERVEUR_OBJ)
-	$(CC) -o $@ $^
-
-$(EXEC_CLIENT): $(CLIENT_OBJ)
-	$(CC) -o $@ $^
+bin/client: $(OBJS_CLT)
+	@mkdir -p bin
+	$(CC) $(CFLAGS) -o $@ $^ -lncurses
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(SERVEUR_OBJ) $(CLIENT_OBJ)
-
-mrproper: clean
-	rm -rf bin
+	rm -f $(OBJS_SRV) $(OBJS_CLT) bin/serveur bin/client

@@ -1,0 +1,35 @@
+#ifndef PROTOCOL_H
+#define PROTOCOL_H
+
+typedef enum {
+    REQ_LOGIN = 10,
+    RES_LOGIN_OK = 11,
+    RES_LOGIN_ERROR = 12,
+    REQ_MATCHMAKING = 20,
+    RES_WAITING = 21,
+    REQ_CANCEL_MATCH = 22,
+    PUSH_MATCH_FOUND = 23,
+    REQ_MOVE = 30,
+    RES_MOVE_ERROR = 31,
+    PUSH_GRID = 32,
+    PUSH_TURN = 33,
+    PUSH_ENDGAME = 34,
+    PUSH_ELO_UPDATE = 35,
+    REQ_ADD_FRIEND = 40,
+    RES_FRIEND_ADDED = 41,
+    REQ_FRIEND_LIST = 42,
+    PUSH_FRIEND_LIST = 43,
+    REQ_CHALLENGE = 44,
+    PUSH_CHALLENGE = 45,
+    RES_CHALLENGE_ACCEPT = 46,
+    REQ_JOIN_TOURNAMENT = 50,
+    PUSH_TOURNAMENT_STATE = 51,
+    RES_ERROR_STATE = 99
+} TypeMessage;
+
+typedef struct {
+    int type;
+    int payload_size;
+} Header;
+
+#endif
