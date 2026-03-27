@@ -632,7 +632,10 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
         }
         else if ((ch == 'd' || ch == 'D') && amis->nb_amis > 0) {
             dessiner_notification("Numero de l'ami a defier (1-N) :");
+            /* Passer en bloquant le temps de lire un chiffre */
+            timeout(-1);
             int c2 = getch();
+            timeout(50); /* retour non-bloquant */
             if (c2 >= '1' && c2 <= '9') {
                 int idx = c2 - '1';
                 if (idx < amis->nb_amis && amis->en_ligne[idx]) {
