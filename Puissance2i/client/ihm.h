@@ -20,7 +20,7 @@ void demander_pseudo_ncurses(char *pseudo, const char *suggestion);
 void dessiner_menu(const ClientInfo *moi);
 void dessiner_matchmaking(void);
 void dessiner_partie(const ClientInfo *moi, const PartieInfo *partie, const char *msg);
-void dessiner_fin_partie(const ClientInfo *moi, int id_vainqueur, int points, int nv_elo);
+void dessiner_fin_partie(const ClientInfo *moi, int id_vainqueur, int points, int nv_elo, int ancien_elo);
 void dessiner_amis(const PayloadFriendList *liste);
 void dessiner_profil(const ClientInfo *moi);
 void dessiner_statut(int statut_actuel);

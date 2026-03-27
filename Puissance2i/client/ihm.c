@@ -247,7 +247,7 @@ void dessiner_partie(const ClientInfo *moi, const PartieInfo *partie, const char
  * 4. Fin de partie
  * ================================================================ */
 
-void dessiner_fin_partie(const ClientInfo *moi, int id_vainqueur, int points, int nv_elo) {
+void dessiner_fin_partie(const ClientInfo *moi, int id_vainqueur, int points, int nv_elo, int ancien_elo) {
     clear();
     bandeau("               FIN DE PARTIE           ");
 
@@ -269,7 +269,7 @@ void dessiner_fin_partie(const ClientInfo *moi, int id_vainqueur, int points, in
     char buf[32];
     snprintf(buf, sizeof(buf), "%+d pt(s)", points);
     kv(9,  4, "Points gagnes  : ", buf);
-    snprintf(buf, sizeof(buf), "%d (%+d)", nv_elo, nv_elo - moi->elo);
+    snprintf(buf, sizeof(buf), "%d (%+d)", nv_elo, nv_elo - ancien_elo);
     kv(10, 4, "Nouvel ELO     : ", buf);
 
     ligne(12);
@@ -496,6 +496,7 @@ void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
 
     case PUSH_ENDGAME: {
         PayloadEndGame *pe = (PayloadEndGame *)payload;
+        int ancien_elo = moi->elo;
         moi->elo    = pe->nouvel_elo;
         moi->score += pe->points_gagnes;
         if (pe->id_vainqueur == moi->id) moi->nb_victoires++;
@@ -503,7 +504,7 @@ void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
         else                             moi->nb_defaites++;
         moi->etat = ETAT_MENU;
         *etat_ihm = IHM_FIN_PARTIE;
-        dessiner_fin_partie(moi, pe->id_vainqueur, pe->points_gagnes, pe->nouvel_elo);
+        dessiner_fin_partie(moi, pe->id_vainqueur, pe->points_gagnes, pe->nouvel_elo, ancien_elo);
         break;
     }
 

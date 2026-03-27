@@ -12,6 +12,8 @@
 #include "../reseau/data.h"
 #include "../commun/protocol.h"
 #include "../commun/structures.h"
+#include "../commun/profil.h"
+#include <sys/stat.h>
 #include "jeu.h"
 #include "elo.h"
 #include "matchmaking.h"
@@ -53,6 +55,28 @@ static void nettoyer_client(int i) {
     if (clients[i].socket == 0) return;
     printf("[SRV] '%s' (ID=%d) deconnecte.\n", clients[i].pseudo, clients[i].id);
     fermer_socket(clients[i].socket);
+
+    if (clients[i].pseudo[0] != '\0') {
+        char path[256];
+        snprintf(path, sizeof(path), "profils/%s.dat", clients[i].pseudo);
+        ProfilSauvegarde ps;
+        memset(&ps, 0, sizeof(ps));
+        charger_profil(path, &ps);
+        
+        strncpy(ps.pseudo, clients[i].pseudo, 31);
+        ps.pseudo[31] = '\0';
+        ps.elo = clients[i].elo;
+        ps.score = clients[i].score;
+        ps.nb_victoires = clients[i].nb_victoires;
+        ps.nb_defaites = clients[i].nb_defaites;
+        ps.nb_nuls = clients[i].nb_nuls;
+        
+        ps.nb_amis = clients[i].nb_amis;
+        for(int a=0; a<clients[i].nb_amis; a++){
+            ps.amis[a] = clients[i].amis[a];
+        }
+        sauvegarder_profil(path, &ps);
+    }
 
     if (clients[i].id_partie_actuelle != 0) {
         int p = get_partie(clients[i].id_partie_actuelle);
@@ -185,6 +209,22 @@ static void terminer_partie(int p, int id_vainqueur, int match_nul) {
         PayloadEndGame peg = {id_vainqueur, pts1, nv_elo1};
         (void)delta1;
         envoyer_message(clients[c1].socket, PUSH_ENDGAME, &peg, sizeof(peg));
+
+        char path[256];
+        snprintf(path, sizeof(path), "profils/%s.dat", clients[c1].pseudo);
+        ProfilSauvegarde ps;
+        memset(&ps, 0, sizeof(ps));
+        charger_profil(path, &ps);
+        strncpy(ps.pseudo, clients[c1].pseudo, 31);
+        ps.pseudo[31] = '\0';
+        ps.elo = clients[c1].elo;
+        ps.score = clients[c1].score;
+        ps.nb_victoires = clients[c1].nb_victoires;
+        ps.nb_defaites = clients[c1].nb_defaites;
+        ps.nb_nuls = clients[c1].nb_nuls;
+        ps.nb_amis = clients[c1].nb_amis;
+        for(int a=0; a<clients[c1].nb_amis; a++) ps.amis[a] = clients[c1].amis[a];
+        sauvegarder_profil(path, &ps);
     }
     if (c2 != -1) {
         clients[c2].score += pts2;
@@ -197,6 +237,22 @@ static void terminer_partie(int p, int id_vainqueur, int match_nul) {
         PayloadEndGame peg = {id_vainqueur, pts2, nv_elo2};
         (void)delta2;
         envoyer_message(clients[c2].socket, PUSH_ENDGAME, &peg, sizeof(peg));
+
+        char path[256];
+        snprintf(path, sizeof(path), "profils/%s.dat", clients[c2].pseudo);
+        ProfilSauvegarde ps;
+        memset(&ps, 0, sizeof(ps));
+        charger_profil(path, &ps);
+        strncpy(ps.pseudo, clients[c2].pseudo, 31);
+        ps.pseudo[31] = '\0';
+        ps.elo = clients[c2].elo;
+        ps.score = clients[c2].score;
+        ps.nb_victoires = clients[c2].nb_victoires;
+        ps.nb_defaites = clients[c2].nb_defaites;
+        ps.nb_nuls = clients[c2].nb_nuls;
+        ps.nb_amis = clients[c2].nb_amis;
+        for(int a=0; a<clients[c2].nb_amis; a++) ps.amis[a] = clients[c2].amis[a];
+        sauvegarder_profil(path, &ps);
     }
     parties[p].active = 0;
 }
@@ -218,6 +274,30 @@ static void traiter_message(int ci, Header *h, void *payload) {
                 return;
             }
             strncpy(clients[ci].pseudo, pl->pseudo, 31);
+
+            char path[256];
+            snprintf(path, sizeof(path), "profils/%s.dat", clients[ci].pseudo);
+            ProfilSauvegarde ps;
+            memset(&ps, 0, sizeof(ps));
+            if (charger_profil(path, &ps)) {
+                clients[ci].elo = ps.elo;
+                clients[ci].score = ps.score;
+                clients[ci].nb_victoires = ps.nb_victoires;
+                clients[ci].nb_defaites = ps.nb_defaites;
+                clients[ci].nb_nuls = ps.nb_nuls;
+                clients[ci].nb_amis = ps.nb_amis;
+                for(int a=0; a<ps.nb_amis; a++){
+                    clients[ci].amis[a] = ps.amis[a];
+                }
+            } else {
+                clients[ci].elo = 1200;
+                clients[ci].score = 0;
+                clients[ci].nb_victoires = 0;
+                clients[ci].nb_defaites = 0;
+                clients[ci].nb_nuls = 0;
+                clients[ci].nb_amis = 0;
+            }
+
             PayloadLoginOK pok = {clients[ci].id, clients[ci].elo, clients[ci].score};
             envoyer_message(sd, RES_LOGIN_OK, &pok, sizeof(pok));
             printf("[SRV] '%s' (ID=%d) connecte.\n", clients[ci].pseudo, clients[ci].id);
@@ -395,6 +475,8 @@ int main(void) {
 
     int server_fd = creer_serveur(SRV_PORT);
     printf("[SRV] Serveur Puissance 2i demarre sur le port %d\n", SRV_PORT);
+
+    mkdir("profils", 0755);
 
     fd_set readfds;
     while (1) {
