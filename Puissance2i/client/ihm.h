@@ -25,6 +25,7 @@ void dessiner_amis(const PayloadFriendList *liste);
 void dessiner_profil(const ClientInfo *moi);
 void dessiner_statut(int statut_actuel);
 void dessiner_choisir_elo(void);
+void dessiner_classement(const PayloadLeaderboard *lb);
 void dessiner_notification(const char *msg);
 
 /* --- Saisie de chaine en overlay --- */
@@ -49,6 +50,8 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
 #define IHM_PROFIL        5
 #define IHM_STATUT        6   /* Changer statut social */
 #define IHM_CHOISIR_ELO   7   /* Choix partie classee / amicale */
+#define IHM_FRIEND_REQUEST 8  /* Demande d'ami entrante : [o/n] */
+#define IHM_CLASSEMENT    9   /* Classement ELO serveur          */
 
 /* --- Paires de couleurs --- */
 #define COL_TITRE    1

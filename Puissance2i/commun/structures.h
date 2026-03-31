@@ -24,6 +24,9 @@ typedef struct {
     int id_joueur;
     int elo;
     int score;
+    int nb_victoires;
+    int nb_defaites;
+    int nb_nuls;
 } PayloadLoginOK;
 
 typedef struct {
@@ -58,6 +61,23 @@ typedef struct {
     char pseudo_ami[32];
 } PayloadAddFriend;
 
+/* Demande d'ajout d'ami (nouveau systeme avec acceptation) */
+typedef struct {
+    char pseudo_cible[32];   /* pseudo du joueur a ajouter */
+} PayloadFriendRequest;
+
+typedef struct {
+    int id_demandeur;        /* ID de celui qui a fait la demande */
+    int accepte;             /* 1=oui, 0=non                       */
+} PayloadFriendResponse;
+
+/* Notification envoyee a la cible d'une demande d'ami */
+typedef struct {
+    int  id_demandeur;
+    char pseudo_demandeur[32];
+    int  elo_demandeur;
+} PayloadFriendRequestReceived;
+
 typedef struct {
     int nb_amis;
     int ids[50];
@@ -91,6 +111,17 @@ typedef struct {
 typedef struct {
     int elo_impact; /* 1=partie classee, 0=partie amicale (sans ELO) */
 } PayloadSetEloMode;
+
+/* --- Classement serveur --- */
+#define MAX_CLASSEMENT 20
+typedef struct {
+    int  nb;
+    char pseudo[MAX_CLASSEMENT][32];
+    int  elo[MAX_CLASSEMENT];
+    int  nb_victoires[MAX_CLASSEMENT];
+    int  nb_defaites[MAX_CLASSEMENT];
+    int  nb_nuls[MAX_CLASSEMENT];
+} PayloadLeaderboard;
 
 /* --- Profil --- */
 typedef struct {

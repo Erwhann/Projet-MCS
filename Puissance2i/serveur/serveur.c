@@ -14,6 +14,7 @@
 #include "../commun/structures.h"
 #include "../commun/profil.h"
 #include <sys/stat.h>
+#include <dirent.h>
 #include "jeu.h"
 #include "elo.h"
 #include "matchmaking.h"
@@ -57,7 +58,7 @@ static void nettoyer_client(int i) {
     fermer_socket(clients[i].socket);
 
     if (clients[i].pseudo[0] != '\0') {
-        char path[256];
+        char path[512];
         snprintf(path, sizeof(path), "profils/%s.dat", clients[i].pseudo);
         ProfilSauvegarde ps;
         memset(&ps, 0, sizeof(ps));
@@ -188,8 +189,8 @@ static void terminer_partie(int p, int id_vainqueur, int match_nul) {
         delta2 = nv2 - elo2;
         nv_elo1 = nv1;
         nv_elo2 = nv2;
-        if (c1) clients[c1].elo = nv_elo1;
-        if (c2) clients[c2].elo = nv_elo2;
+        if (c1 != -1) clients[c1].elo = nv_elo1;
+        if (c2 != -1) clients[c2].elo = nv_elo2;
     }
 
     /* Points et statistiques */
@@ -210,7 +211,7 @@ static void terminer_partie(int p, int id_vainqueur, int match_nul) {
         (void)delta1;
         envoyer_message(clients[c1].socket, PUSH_ENDGAME, &peg, sizeof(peg));
 
-        char path[256];
+        char path[512];
         snprintf(path, sizeof(path), "profils/%s.dat", clients[c1].pseudo);
         ProfilSauvegarde ps;
         memset(&ps, 0, sizeof(ps));
@@ -238,7 +239,7 @@ static void terminer_partie(int p, int id_vainqueur, int match_nul) {
         (void)delta2;
         envoyer_message(clients[c2].socket, PUSH_ENDGAME, &peg, sizeof(peg));
 
-        char path[256];
+        char path[512];
         snprintf(path, sizeof(path), "profils/%s.dat", clients[c2].pseudo);
         ProfilSauvegarde ps;
         memset(&ps, 0, sizeof(ps));
@@ -275,7 +276,7 @@ static void traiter_message(int ci, Header *h, void *payload) {
             }
             strncpy(clients[ci].pseudo, pl->pseudo, 31);
 
-            char path[256];
+            char path[512];
             snprintf(path, sizeof(path), "profils/%s.dat", clients[ci].pseudo);
             ProfilSauvegarde ps;
             memset(&ps, 0, sizeof(ps));
@@ -298,7 +299,13 @@ static void traiter_message(int ci, Header *h, void *payload) {
                 clients[ci].nb_amis = 0;
             }
 
-            PayloadLoginOK pok = {clients[ci].id, clients[ci].elo, clients[ci].score};
+            PayloadLoginOK pok;
+            pok.id_joueur    = clients[ci].id;
+            pok.elo          = clients[ci].elo;
+            pok.score        = clients[ci].score;
+            pok.nb_victoires = clients[ci].nb_victoires;
+            pok.nb_defaites  = clients[ci].nb_defaites;
+            pok.nb_nuls      = clients[ci].nb_nuls;
             envoyer_message(sd, RES_LOGIN_OK, &pok, sizeof(pok));
             printf("[SRV] '%s' (ID=%d) connecte.\n", clients[ci].pseudo, clients[ci].id);
         }
@@ -316,17 +323,58 @@ static void traiter_message(int ci, Header *h, void *payload) {
             }
         }
 
-        else if (h->type == REQ_ADD_FRIEND && h->payload_size == (int)sizeof(PayloadAddFriend)) {
-            PayloadAddFriend *paf = (PayloadAddFriend *)payload;
-            paf->pseudo_ami[31] = '\0';
-            int ok = ajouter_ami(&clients[ci], clients, MAX_CLIENTS, paf->pseudo_ami);
-            if (ok) {
-                int a = get_by_pseudo(paf->pseudo_ami);
+        else if (h->type == REQ_ADD_FRIEND) {
+            /* Desactive : utiliser REQ_FRIEND_REQUEST a la place */
+            PayloadError pe = {7};
+            envoyer_message(sd, RES_ERROR_STATE, &pe, sizeof(pe));
+        }
+
+        else if (h->type == REQ_FRIEND_REQUEST && h->payload_size == (int)sizeof(PayloadFriendRequest)) {
+            PayloadFriendRequest *pfr = (PayloadFriendRequest *)payload;
+            pfr->pseudo_cible[31] = '\0';
+            int a = get_by_pseudo(pfr->pseudo_cible);
+            if (a == -1) {
+                /* Joueur hors ligne ou inexistant */
+                PayloadError pe = {4};
+                envoyer_message(sd, RES_ERROR_STATE, &pe, sizeof(pe));
+            } else if (a == ci) {
+                PayloadError pe = {5};
+                envoyer_message(sd, RES_ERROR_STATE, &pe, sizeof(pe));
+            } else {
+                /* Verifier si deja ami */
+                int deja = 0;
+                for (int k = 0; k < clients[ci].nb_amis; k++) {
+                    if (clients[ci].amis[k] == clients[a].id) { deja = 1; break; }
+                }
+                if (deja) {
+                    PayloadError pe = {5};
+                    envoyer_message(sd, RES_ERROR_STATE, &pe, sizeof(pe));
+                } else {
+                    PayloadFriendRequestReceived prr;
+                    prr.id_demandeur = clients[ci].id;
+                    prr.elo_demandeur = clients[ci].elo;
+                    strncpy(prr.pseudo_demandeur, clients[ci].pseudo, 31);
+                    prr.pseudo_demandeur[31] = '\0';
+                    envoyer_message(clients[a].socket, PUSH_FRIEND_REQUEST, &prr, sizeof(prr));
+                }
+            }
+        }
+
+        else if (h->type == RES_FRIEND_REQUEST && h->payload_size == (int)sizeof(PayloadFriendResponse)) {
+            PayloadFriendResponse *pfr = (PayloadFriendResponse *)payload;
+            int a = get_by_id(pfr->id_demandeur);
+            if (pfr->accepte) {
+                /* Ajouter mutuellement */
+                ajouter_ami(&clients[ci], clients, MAX_CLIENTS, (a != -1) ? clients[a].pseudo : "");
                 if (a != -1) ajouter_ami(&clients[a], clients, MAX_CLIENTS, clients[ci].pseudo);
                 envoyer_message(sd, RES_FRIEND_ADDED, NULL, 0);
+                if (a != -1) envoyer_message(clients[a].socket, RES_FRIEND_ADDED, NULL, 0);
             } else {
-                PayloadError pe = {1};
-                envoyer_message(sd, RES_ERROR_STATE, &pe, sizeof(pe));
+                /* Notifier le demandeur du refus */
+                if (a != -1) {
+                    PayloadError pe = {6};
+                    envoyer_message(clients[a].socket, RES_ERROR_STATE, &pe, sizeof(pe));
+                }
             }
         }
 
@@ -334,6 +382,58 @@ static void traiter_message(int ci, Header *h, void *payload) {
             PayloadFriendList pfl;
             construire_liste_amis(&clients[ci], clients, MAX_CLIENTS, &pfl);
             envoyer_message(sd, PUSH_FRIEND_LIST, &pfl, sizeof(pfl));
+        }
+
+        else if (h->type == REQ_LEADERBOARD) {
+            // Scanner tous les profils .dat et construire le classement ELO
+            PayloadLeaderboard lb;
+            memset(&lb, 0, sizeof(lb));
+
+            /* Tableau temporaire pour le tri (max 200 profils) */
+            #define MAX_PROFILS_SCAN 200
+            ProfilSauvegarde tmp[MAX_PROFILS_SCAN];
+            int nb_tmp = 0;
+
+            DIR *d = opendir("profils");
+            if (d) {
+                struct dirent *ent;
+                while ((ent = readdir(d)) != NULL && nb_tmp < MAX_PROFILS_SCAN) {
+                    int len = (int)strlen(ent->d_name);
+                    if (len > 4 && strcmp(ent->d_name + len - 4, ".dat") == 0) {
+                        char path[512];
+                        snprintf(path, sizeof(path), "profils/%s", ent->d_name);
+                        ProfilSauvegarde ps;
+                        memset(&ps, 0, sizeof(ps));
+                        if (charger_profil(path, &ps)) {
+                            tmp[nb_tmp++] = ps;
+                        }
+                    }
+                }
+                closedir(d);
+            }
+
+            /* Tri par ELO decroissant (tri bulle simple) */
+            for (int x = 0; x < nb_tmp - 1; x++) {
+                for (int y = 0; y < nb_tmp - 1 - x; y++) {
+                    if (tmp[y].elo < tmp[y+1].elo) {
+                        ProfilSauvegarde t = tmp[y];
+                        tmp[y] = tmp[y+1];
+                        tmp[y+1] = t;
+                    }
+                }
+            }
+
+            /* Remplir le payload (top MAX_CLASSEMENT) */
+            lb.nb = (nb_tmp < MAX_CLASSEMENT) ? nb_tmp : MAX_CLASSEMENT;
+            for (int x = 0; x < lb.nb; x++) {
+                strncpy(lb.pseudo[x], tmp[x].pseudo, 31);
+                lb.pseudo[x][31] = '\0';
+                lb.elo[x]          = tmp[x].elo;
+                lb.nb_victoires[x] = tmp[x].nb_victoires;
+                lb.nb_defaites[x]  = tmp[x].nb_defaites;
+                lb.nb_nuls[x]      = tmp[x].nb_nuls;
+            }
+            envoyer_message(sd, PUSH_LEADERBOARD, &lb, sizeof(lb));
         }
 
         else if (h->type == REQ_CHALLENGE && h->payload_size == (int)sizeof(PayloadChallenge)) {

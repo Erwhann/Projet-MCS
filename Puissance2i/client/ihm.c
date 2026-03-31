@@ -27,6 +27,12 @@ static void ligne(int y) {
     attroff(COLOR_PAIR(COL_NORMAL));
 }
 
+/* Efface l'ecran ET applique le fond colore sur tout le terminal */
+static void ecran_effacer(void) {
+    bkgd(COLOR_PAIR(COL_NORMAL));
+    clear();
+}
+
 static void kv(int y, int x, const char *label, const char *val) {
     attron(COLOR_PAIR(COL_NORMAL));
     mvprintw(y, x, "%s", label);
@@ -60,6 +66,7 @@ void init_ihm(void) {
         init_pair(COL_MOI,     COLOR_GREEN,  COLOR_BLUE);
         init_pair(COL_ADV,     COLOR_RED,    COLOR_BLUE);
         init_pair(COL_NOTIF,   COLOR_BLACK,  COLOR_YELLOW);
+        bkgd(COLOR_PAIR(COL_NORMAL));
     }
 }
 
@@ -139,7 +146,7 @@ void dessiner_menu(const ClientInfo *moi) {
     int s = (int)moi->etat_social;
     if (s < 0 || s > 2) s = 0;
 
-    clear();
+    ecran_effacer();
     bandeau("             MENU PRINCIPAL             ");
     char buf[32];
     kv(5, 4, "Joueur : ", moi->pseudo);
@@ -158,11 +165,12 @@ void dessiner_menu(const ClientInfo *moi) {
     mvprintw(11, 6, " [2]  Liste d'amis & Defis");
     mvprintw(12, 6, " [3]  Changer mon statut");
     mvprintw(13, 6, " [4]  Consulter mon profil");
-    mvprintw(14, 6, " [0]  Quitter");
+    mvprintw(14, 6, " [5]  Classement ELO");
+    mvprintw(15, 6, " [0]  Quitter");
     attroff(COLOR_PAIR(COL_NORMAL));
-    ligne(16);
+    ligne(17);
     attron(COLOR_PAIR(COL_ACCENT));
-    mvprintw(17, 4, "Votre choix :");
+    mvprintw(18, 4, "Votre choix :");
     attroff(COLOR_PAIR(COL_ACCENT));
     refresh();
 }
@@ -172,7 +180,7 @@ void dessiner_menu(const ClientInfo *moi) {
  * ================================================================ */
 
 void dessiner_matchmaking(void) {
-    clear();
+    ecran_effacer();
     bandeau("             RECHERCHE DE PARTIE        ");
     attron(COLOR_PAIR(COL_ACCENT) | A_BOLD);
     mvprintw(6, 4, ">> Recherche d'un adversaire en cours...");
@@ -189,7 +197,7 @@ void dessiner_matchmaking(void) {
  * ================================================================ */
 
 void dessiner_partie(const ClientInfo *moi, const PartieInfo *partie, const char *msg) {
-    clear();
+    ecran_effacer();
     bandeau("              PARTIE EN COURS           ");
 
     attron(COLOR_PAIR(COL_NORMAL) | A_BOLD);
@@ -248,7 +256,7 @@ void dessiner_partie(const ClientInfo *moi, const PartieInfo *partie, const char
  * ================================================================ */
 
 void dessiner_fin_partie(const ClientInfo *moi, int id_vainqueur, int points, int nv_elo, int ancien_elo) {
-    clear();
+    ecran_effacer();
     bandeau("               FIN DE PARTIE           ");
 
     if (id_vainqueur == moi->id) {
@@ -284,7 +292,7 @@ void dessiner_fin_partie(const ClientInfo *moi, int id_vainqueur, int points, in
  * ================================================================ */
 
 void dessiner_amis(const PayloadFriendList *liste) {
-    clear();
+    ecran_effacer();
     bandeau("         LISTE D'AMIS & DEFIS          ");
     const char *stat_labels[] = {"En ligne", "Occupe", "Absent"};
 
@@ -318,7 +326,7 @@ void dessiner_amis(const PayloadFriendList *liste) {
 
     ligne(22);
     attron(COLOR_PAIR(COL_ACCENT));
-    mvprintw(23, 4, " [a] Ajouter  |  [d]+# Defier/Partie  |  [q] Retour");
+    mvprintw(23, 4, " [a] Ajouter  |  [r] Rafraichir  |  [d]+# Defier  |  [q] Retour");
     attroff(COLOR_PAIR(COL_ACCENT));
     refresh();
 }
@@ -328,7 +336,7 @@ void dessiner_amis(const PayloadFriendList *liste) {
  * ================================================================ */
 
 void dessiner_profil(const ClientInfo *moi) {
-    clear();
+    ecran_effacer();
     bandeau("           MON PROFIL COMPLET          ");
     char buf[32];
     kv(5, 4, "Pseudo    : ", moi->pseudo);
@@ -365,7 +373,7 @@ void dessiner_profil(const ClientInfo *moi) {
 
 void dessiner_statut(int statut_actuel) {
     const char *labels[] = {"En ligne", "Occupe", "Absent"};
-    clear();
+    ecran_effacer();
     bandeau("           CHANGER MON STATUT          ");
     attron(COLOR_PAIR(COL_NORMAL));
     mvprintw(5, 4, "Statut actuel : ");
@@ -388,7 +396,7 @@ void dessiner_statut(int statut_actuel) {
  * ================================================================ */
 
 void dessiner_choisir_elo(void) {
-    clear();
+    ecran_effacer();
     bandeau("           MODE DE LA PARTIE           ");
     attron(COLOR_PAIR(COL_ACCENT) | A_BOLD);
     mvprintw(6, 4, "Vous avez accepte un defi.");
@@ -399,6 +407,46 @@ void dessiner_choisir_elo(void) {
     mvprintw(11, 6, " [o]  Oui - Partie classee  (ELO modifie)");
     mvprintw(12, 6, " [n]  Non - Partie amicale  (ELO conserve)");
     attroff(COLOR_PAIR(COL_NORMAL));
+    refresh();
+}
+
+/* ================================================================
+ * 10. Classement ELO
+ * ================================================================ */
+
+void dessiner_classement(const PayloadLeaderboard *lb) {
+    ecran_effacer();
+    bandeau("           CLASSEMENT ELO SERVEUR      ");
+
+    attron(COLOR_PAIR(COL_NORMAL) | A_BOLD);
+    mvprintw(5, 4, "  #  Pseudo              ELO    V   D   N");
+    attroff(COLOR_PAIR(COL_NORMAL) | A_BOLD);
+    ligne(6);
+
+    for (int i = 0; i < lb->nb && i < 14; i++) {
+        if (i == 0)      attron(COLOR_PAIR(COL_VAINC)  | A_BOLD);
+        else if (i == 1) attron(COLOR_PAIR(COL_ACCENT) | A_BOLD);
+        else if (i == 2) attron(COLOR_PAIR(COL_DEFAITE)| A_BOLD);
+        else             attron(COLOR_PAIR(COL_NORMAL));
+
+        mvprintw(7 + i, 4, " %2d. %-20s %4d  %3d %3d %3d",
+                 i + 1,
+                 lb->pseudo[i],
+                 lb->elo[i],
+                 lb->nb_victoires[i],
+                 lb->nb_defaites[i],
+                 lb->nb_nuls[i]);
+
+        if (i == 0)      attroff(COLOR_PAIR(COL_VAINC)  | A_BOLD);
+        else if (i == 1) attroff(COLOR_PAIR(COL_ACCENT) | A_BOLD);
+        else if (i == 2) attroff(COLOR_PAIR(COL_DEFAITE)| A_BOLD);
+        else             attroff(COLOR_PAIR(COL_NORMAL));
+    }
+
+    ligne(22);
+    attron(COLOR_PAIR(COL_ACCENT));
+    mvprintw(23, 4, " [q] ou [ENTREE] pour retourner au menu");
+    attroff(COLOR_PAIR(COL_ACCENT));
     refresh();
 }
 
@@ -429,9 +477,12 @@ void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
 
     case RES_LOGIN_OK: {
         PayloadLoginOK *p = (PayloadLoginOK *)payload;
-        moi->id    = p->id_joueur;
-        moi->elo   = p->elo;
-        moi->score = p->score;
+        moi->id           = p->id_joueur;
+        moi->elo          = p->elo;
+        moi->score        = p->score;
+        moi->nb_victoires = p->nb_victoires;
+        moi->nb_defaites  = p->nb_defaites;
+        moi->nb_nuls      = p->nb_nuls;
         *etat_ihm  = IHM_MENU;
         dessiner_menu(moi);
         break;
@@ -520,6 +571,25 @@ void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
         dessiner_notification("Ami ajoute avec succes !");
         break;
 
+    case PUSH_LEADERBOARD: {
+        PayloadLeaderboard *lb = (PayloadLeaderboard *)payload;
+        *etat_ihm = IHM_CLASSEMENT;
+        dessiner_classement(lb);
+        break;
+    }
+
+    case PUSH_FRIEND_REQUEST: {
+        PayloadFriendRequestReceived *prr = (PayloadFriendRequestReceived *)payload;
+        *challenge_en_attente = 2;          /* 2 = demande d'ami (vs 1 = defi) */
+        *challenger_id = prr->id_demandeur;
+        char notif[96];
+        snprintf(notif, sizeof(notif),
+                 "[Ami] %s (ELO %d) veut vous ajouter -- Accepter ? [o/n] :",
+                 prr->pseudo_demandeur, prr->elo_demandeur);
+        dessiner_notification(notif);
+        break;
+    }
+
     case PUSH_CHALLENGE: {
         PayloadChallengeReceived *pcr = (PayloadChallengeReceived *)payload;
         *challenge_en_attente = 1;
@@ -537,6 +607,12 @@ void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
             PayloadError *pe = (PayloadError *)payload;
             if (pe->code_erreur == 3)
                 dessiner_notification("Votre defi a ete refuse.");
+            else if (pe->code_erreur == 4)
+                dessiner_notification("Erreur : joueur hors ligne ou introuvable.");
+            else if (pe->code_erreur == 5)
+                dessiner_notification("Erreur : deja ami ou meme joueur.");
+            else if (pe->code_erreur == 6)
+                dessiner_notification("Demande d'ami refusee.");
             else
                 dessiner_notification("Erreur : joueur introuvable ou indisponible.");
         }
@@ -557,12 +633,21 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
 {
     (void)partie;
 
-    /* Defi entrant : priorite absolue */
+    /* Defi ou demande d'ami entrant : priorite absolue */
     if (*challenge_en_attente && (ch == 'o' || ch == 'O' || ch == 'n' || ch == 'N')) {
-        PayloadChallengeResponse pcr;
-        pcr.accepte        = (ch == 'o' || ch == 'O') ? 1 : 0;
-        pcr.id_challengeur = challenger_id;
-        envoyer_message(sock, RES_CHALLENGE_ACCEPT, &pcr, sizeof(pcr));
+        if (*challenge_en_attente == 1) {
+            /* Defi de jeu */
+            PayloadChallengeResponse pcr;
+            pcr.accepte        = (ch == 'o' || ch == 'O') ? 1 : 0;
+            pcr.id_challengeur = challenger_id;
+            envoyer_message(sock, RES_CHALLENGE_ACCEPT, &pcr, sizeof(pcr));
+        } else if (*challenge_en_attente == 2) {
+            /* Demande d'ami */
+            PayloadFriendResponse pfr;
+            pfr.accepte      = (ch == 'o' || ch == 'O') ? 1 : 0;
+            pfr.id_demandeur = challenger_id;
+            envoyer_message(sock, RES_FRIEND_REQUEST, &pfr, sizeof(pfr));
+        }
         *challenge_en_attente = 0;
         return;
     }
@@ -585,6 +670,9 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
         case '4':
             *etat_ihm = IHM_PROFIL;
             dessiner_profil(moi);
+            break;
+        case '5':
+            envoyer_message(sock, REQ_LEADERBOARD, NULL, 0);
             break;
         case '0':
             fin_ihm();
@@ -624,12 +712,15 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
         else if (ch == 'a' || ch == 'A') {
             char pseudo_ami[32] = {0};
             if (saisir_chaine_overlay("Pseudo de l'ami a ajouter :", pseudo_ami, 32)) {
-                PayloadAddFriend paf;
-                strncpy(paf.pseudo_ami, pseudo_ami, 31);
-                paf.pseudo_ami[31] = '\0';
-                envoyer_message(sock, REQ_ADD_FRIEND, &paf, sizeof(paf));
+                PayloadFriendRequest pfr;
+                strncpy(pfr.pseudo_cible, pseudo_ami, 31);
+                pfr.pseudo_cible[31] = '\0';
+                envoyer_message(sock, REQ_FRIEND_REQUEST, &pfr, sizeof(pfr));
             }
             dessiner_amis(amis);
+        }
+        else if (ch == 'r' || ch == 'R') {
+            envoyer_message(sock, REQ_FRIEND_LIST, NULL, 0);
         }
         else if ((ch == 'd' || ch == 'D') && amis->nb_amis > 0) {
             dessiner_notification("Numero de l'ami a defier (1-N) :");
@@ -688,6 +779,13 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
             envoyer_message(sock, REQ_SET_ELO_MODE, &psm, sizeof(psm));
         }
         break;
+    case IHM_CLASSEMENT:
+        if (ch == 'q' || ch == 'Q' || ch == '\n' || ch == KEY_ENTER) {
+            *etat_ihm = IHM_MENU;
+            dessiner_menu(moi);
+        }
+        break;
+
 
     default:
         break;

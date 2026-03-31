@@ -22,11 +22,16 @@ typedef enum {
     REQ_CHALLENGE = 44,
     PUSH_CHALLENGE = 45,
     RES_CHALLENGE_ACCEPT = 46,
+    REQ_FRIEND_REQUEST  = 47,   /* Client A -> Serveur : demande d'ajout de B */
+    PUSH_FRIEND_REQUEST = 48,   /* Serveur -> Client B : A veut t'ajouter     */
+    RES_FRIEND_REQUEST  = 49,   /* Client B -> Serveur : accepte/refuse        */
     REQ_JOIN_TOURNAMENT = 50,
     PUSH_TOURNAMENT_STATE = 51,
     REQ_CHANGE_STATE = 60,   /* Changer statut social (en ligne/occupe/absent) */
     PUSH_CHOOSE_ELO  = 61,   /* Serveur demande si partie classee (challenge) */
     REQ_SET_ELO_MODE = 62,   /* Client repond : 1=avec ELO, 0=partie amicale  */
+    REQ_LEADERBOARD  = 70,   /* Client demande le classement ELO               */
+    PUSH_LEADERBOARD = 71,   /* Serveur envoie le classement                   */
     RES_ERROR_STATE = 99
 } TypeMessage;
 
