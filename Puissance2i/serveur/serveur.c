@@ -384,6 +384,33 @@ static void traiter_message(int ci, Header *h, void *payload) {
             envoyer_message(sd, PUSH_FRIEND_LIST, &pfl, sizeof(pfl));
         }
 
+        else if (h->type == REQ_REMOVE_FRIEND && h->payload_size == (int)sizeof(PayloadRemoveFriend)) {
+            PayloadRemoveFriend *prf = (PayloadRemoveFriend *)payload;
+            int ok = supprimer_ami(&clients[ci], prf->id_ami);
+            if (ok) {
+                // Supprimer aussi l'autre sens si l'ami est connecte
+                int a = get_by_id(prf->id_ami);
+                if (a != -1) supprimer_ami(&clients[a], clients[ci].id);
+                envoyer_message(sd, RES_FRIEND_REMOVED, NULL, 0);
+                // Mettre a jour les profils
+                char path[512];
+                snprintf(path, sizeof(path), "profils/%s.dat", clients[ci].pseudo);
+                ProfilSauvegarde ps; memset(&ps, 0, sizeof(ps));
+                charger_profil(path, &ps);
+                strncpy(ps.pseudo, clients[ci].pseudo, 31);
+                ps.elo = clients[ci].elo; ps.score = clients[ci].score;
+                ps.nb_victoires = clients[ci].nb_victoires;
+                ps.nb_defaites = clients[ci].nb_defaites;
+                ps.nb_nuls = clients[ci].nb_nuls;
+                ps.nb_amis = clients[ci].nb_amis;
+                for (int k = 0; k < clients[ci].nb_amis; k++) ps.amis[k] = clients[ci].amis[k];
+                sauvegarder_profil(path, &ps);
+            } else {
+                PayloadError pe = {1};
+                envoyer_message(sd, RES_ERROR_STATE, &pe, sizeof(pe));
+            }
+        }
+
         else if (h->type == REQ_LEADERBOARD) {
             // Scanner tous les profils .dat et construire le classement ELO
             PayloadLeaderboard lb;

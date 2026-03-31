@@ -25,6 +25,8 @@ typedef enum {
     REQ_FRIEND_REQUEST  = 47,   /* Client A -> Serveur : demande d'ajout de B */
     PUSH_FRIEND_REQUEST = 48,   /* Serveur -> Client B : A veut t'ajouter     */
     RES_FRIEND_REQUEST  = 49,   /* Client B -> Serveur : accepte/refuse        */
+    REQ_REMOVE_FRIEND   = 53,   /* Client -> Serveur : supprimer un ami        */
+    RES_FRIEND_REMOVED  = 54,   /* Serveur -> Client : confirmation suppression*/
     REQ_JOIN_TOURNAMENT = 50,
     PUSH_TOURNAMENT_STATE = 51,
     REQ_CHANGE_STATE = 60,   /* Changer statut social (en ligne/occupe/absent) */

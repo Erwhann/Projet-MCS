@@ -14,6 +14,12 @@
 int ajouter_ami(ClientInfo *client, ClientInfo *clients_global, int nb_max, const char *pseudo_ami);
 
 /**
+ * Supprime l'ami d'ID id_ami de la liste du client.
+ * Retourne 1 si trouve et supprime, 0 sinon.
+ */
+int supprimer_ami(ClientInfo *client, int id_ami);
+
+/**
  * Construit le payload de liste d'amis du client donné,
  * en croisant avec l'état actuel des clients connectés.
  */

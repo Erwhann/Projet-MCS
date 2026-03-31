@@ -78,6 +78,11 @@ typedef struct {
     int  elo_demandeur;
 } PayloadFriendRequestReceived;
 
+/* Suppression d'un ami */
+typedef struct {
+    int id_ami;              /* ID de l'ami a supprimer */
+} PayloadRemoveFriend;
+
 typedef struct {
     int nb_amis;
     int ids[50];

@@ -326,7 +326,7 @@ void dessiner_amis(const PayloadFriendList *liste) {
 
     ligne(22);
     attron(COLOR_PAIR(COL_ACCENT));
-    mvprintw(23, 4, " [a] Ajouter  |  [r] Rafraichir  |  [d]+# Defier  |  [q] Retour");
+    mvprintw(23, 4, " [a] Ajouter  |  [s]+# Suppr  |  [r] Refresh  |  [d]+# Defier  |  [q] Retour");
     attroff(COLOR_PAIR(COL_ACCENT));
     refresh();
 }
@@ -571,6 +571,10 @@ void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
         dessiner_notification("Ami ajoute avec succes !");
         break;
 
+    case RES_FRIEND_REMOVED:
+        dessiner_notification("Ami supprime. Rafraichissez avec [r].");
+        break;
+
     case PUSH_LEADERBOARD: {
         PayloadLeaderboard *lb = (PayloadLeaderboard *)payload;
         *etat_ihm = IHM_CLASSEMENT;
@@ -721,6 +725,20 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
         }
         else if (ch == 'r' || ch == 'R') {
             envoyer_message(sock, REQ_FRIEND_LIST, NULL, 0);
+        }
+        else if ((ch == 's' || ch == 'S') && amis->nb_amis > 0) {
+            dessiner_notification("Numero de l'ami a supprimer (1-N) :");
+            timeout(-1);
+            int c2 = getch();
+            timeout(50);
+            if (c2 >= '1' && c2 <= '9') {
+                int idx = c2 - '1';
+                if (idx < amis->nb_amis) {
+                    PayloadRemoveFriend prf;
+                    prf.id_ami = amis->ids[idx];
+                    envoyer_message(sock, REQ_REMOVE_FRIEND, &prf, sizeof(prf));
+                }
+            }
         }
         else if ((ch == 'd' || ch == 'D') && amis->nb_amis > 0) {
             dessiner_notification("Numero de l'ami a defier (1-N) :");

@@ -36,6 +36,19 @@ int ajouter_ami(ClientInfo *client, ClientInfo *clients_global, int nb_max, cons
     return 1;
 }
 
+int supprimer_ami(ClientInfo *client, int id_ami) {
+    for (int i = 0; i < client->nb_amis; i++) {
+        if (client->amis[i] == id_ami) {
+            /* Decale les entrees suivantes */
+            for (int j = i; j < client->nb_amis - 1; j++)
+                client->amis[j] = client->amis[j + 1];
+            client->nb_amis--;
+            return 1;
+        }
+    }
+    return 0; /* Pas trouve */
+}
+
 void construire_liste_amis(ClientInfo *client, ClientInfo *clients_global, int nb_max, PayloadFriendList *out) {
     out->nb_amis = 0;
 
