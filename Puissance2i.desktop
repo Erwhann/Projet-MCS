@@ -2,9 +2,7 @@
 Version=1.0
 Name=Puissance 2i
 Comment=Lanceur graphique pour le jeu
-# J'ai ajouté /lanceur.sh à la fin de la ligne Exec
 Exec=/home/dorian/Documents/MIDDLEWARE/Projet-MCS-main/Puissance2i/lanceur.sh
-# Path permet au script de savoir qu'il doit chercher le dossier ./bin ici
 Path=/home/dorian/Documents/MIDDLEWARE/Projet-MCS-main/Puissance2i
 Icon=utilities-terminal
 Terminal=false
