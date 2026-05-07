@@ -74,4 +74,10 @@ cd Puissance2i
 
 ```bash
 doxygen Doxyfile
+
+#Pour lancer dans le navigateur la documentation : 
+xdg-open doxygen_doc/html/index.html
+
 ```
+
+
