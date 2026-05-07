@@ -63,6 +63,8 @@ cd Puissance2i
 
 Ou depuis le raccourci à mettre sur le bureau : "Puissance2i.desktop", le lancer et sélectionner lancer le serveur
 
+! Attention il faut modifier les paths dans le fichier Puissance2i.desktop afin qu'il convienne à votre ordinateur
+
 ### 2. Démarrer un ou plusieurs Clients
 
 Dans d'autres terminaux, lancez le programme client pour vous connecter au serveur :
@@ -74,6 +76,8 @@ cd Puissance2i
 ```
 
 Ou depuis le raccourci à mettre sur le bureau : "Puissance2i.desktop", le lancer et sélectionner lancer le client puis entrer l'ip du serveur 
+
+! Attention il faut modifier les paths dans le fichier Puissance2i.desktop afin qu'il convienne à votre ordinateur
 
 ### 3. Générer la documentation doxygen
 
