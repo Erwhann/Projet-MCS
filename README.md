@@ -61,6 +61,8 @@ cd Puissance2i
 ./bin/serveur
 ```
 
+Ou depuis le raccourci à mettre sur le bureau : "Puissance2i.desktop", le lancer et sélectionner lancer le serveur
+
 ### 2. Démarrer un ou plusieurs Clients
 
 Dans d'autres terminaux, lancez le programme client pour vous connecter au serveur :
@@ -70,6 +72,9 @@ cd Puissance2i
 # l'adresse est configurable :
 ./bin/client [IP_ADDRESS] 8080
 ```
+
+Ou depuis le raccourci à mettre sur le bureau : "Puissance2i.desktop", le lancer et sélectionner lancer le client et entrer l'ip du serveur 
+
 ### 3. Générer la documentation doxygen
 
 ```bash
