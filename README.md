@@ -70,3 +70,8 @@ cd Puissance2i
 # l'adresse est configurable :
 ./bin/client [IP_ADDRESS] 8080
 ```
+### 3. Générer la documentation doxygen
+
+```bash
+doxygen Doxyfile
+```
