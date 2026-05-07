@@ -1,0 +1,62 @@
+#---------------------------------------------------------------------------
+# Projet
+#---------------------------------------------------------------------------
+PROJECT_NAME           = "Puissance 2i"
+PROJECT_NUMBER         = 1.0
+PROJECT_BRIEF          = "Jeu Puissance 4 en réseau avec matchmaking, ELO et gestion des amis"
+OUTPUT_DIRECTORY       = ./doxygen_doc
+OUTPUT_LANGUAGE        = French
+
+#---------------------------------------------------------------------------
+# Sources à documenter
+#---------------------------------------------------------------------------
+INPUT                  = ./Puissance2i
+RECURSIVE              = YES
+FILE_PATTERNS          = *.c *.h
+EXCLUDE_PATTERNS       = *.o
+
+#---------------------------------------------------------------------------
+# Extraction du code (documenter même sans commentaires Doxygen)
+#---------------------------------------------------------------------------
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_METHODS  = YES
+
+#---------------------------------------------------------------------------
+# HTML
+#---------------------------------------------------------------------------
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_TIMESTAMP         = YES
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+
+#---------------------------------------------------------------------------
+# LaTeX (désactivé)
+#---------------------------------------------------------------------------
+GENERATE_LATEX         = NO
+
+#---------------------------------------------------------------------------
+# Graphes de dépendances (nécessite graphviz)
+#---------------------------------------------------------------------------
+HAVE_DOT               = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+
+#---------------------------------------------------------------------------
+# Divers
+#---------------------------------------------------------------------------
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+SHOW_INCLUDE_FILES     = YES
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
