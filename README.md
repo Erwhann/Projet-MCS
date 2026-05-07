@@ -73,7 +73,7 @@ cd Puissance2i
 ./bin/client [IP_ADDRESS] 8080
 ```
 
-Ou depuis le raccourci à mettre sur le bureau : "Puissance2i.desktop", le lancer et sélectionner lancer le client et entrer l'ip du serveur 
+Ou depuis le raccourci à mettre sur le bureau : "Puissance2i.desktop", le lancer et sélectionner lancer le client puis entrer l'ip du serveur 
 
 ### 3. Générer la documentation doxygen
 
