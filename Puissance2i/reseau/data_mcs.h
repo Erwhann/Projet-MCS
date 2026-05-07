@@ -14,29 +14,14 @@
 
 #include "session_mcs.h"
 
-/* -----------------------------------------------------------------------
- * Constantes
- * ----------------------------------------------------------------------- */
-
-/** Taille maximale d'un buffer d'emission/reception. */
 #define MCS_MAX_BUFFER 1024
 
-/* -----------------------------------------------------------------------
- * Types
- * ----------------------------------------------------------------------- */
-
-/** Buffer d'emission / reception. */
 typedef char mcs_buffer_t[MCS_MAX_BUFFER];
 
-/** Type generique : pointeur void. */
 typedef void *mcs_generic;
 
-/** Pointeur sur une fonction de serialisation/deserialisation generique. */
 typedef void (*mcs_pFct)(mcs_generic, mcs_generic);
 
-/* -----------------------------------------------------------------------
- * Prototypes
- * ----------------------------------------------------------------------- */
 
 /**
  * Envoie une requete/reponse sur une socket (STREAM ou DGRAM).
@@ -60,4 +45,4 @@ void mcs_envoyer(socket_t *sockEch, mcs_generic quoi, mcs_pFct serial, ...);
  */
 void mcs_recevoir(socket_t *sockEch, mcs_generic quoi, mcs_pFct deSerial);
 
-#endif /* DATA_MCS_H */
+#endif 

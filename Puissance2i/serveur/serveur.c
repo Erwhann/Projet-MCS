@@ -1,8 +1,3 @@
-/* =========================================================
- * serveur.c -- Serveur Puissance 2i
- * select() mono-processus, machine a etats, CDC ss7.2 / ss8 / ss9.1
- * Aucun accent pour portabilite ASCII.
- * ========================================================= */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,13 +19,11 @@
 #define MAX_PARTIES 25
 #define SRV_PORT    5000
 
-/* ── Donnees globales ── */
 static ClientInfo clients[MAX_CLIENTS];
 static PartieInfo parties[MAX_PARTIES];
 static int next_client_id = 1;
 static int next_partie_id = 1;
 
-/* ── Utilitaires ── */
 
 static int get_by_id(int id) {
     for (int i = 0; i < MAX_CLIENTS; i++)
@@ -50,7 +43,6 @@ static int get_partie(int id) {
     return -1;
 }
 
-/* ── Deconnexion / forfait ── */
 
 static void nettoyer_client(int i) {
     if (clients[i].socket == 0) return;
@@ -106,7 +98,6 @@ static void nettoyer_client(int i) {
     clients[i].id_partie_actuelle = 0;
 }
 
-/* ── Lancement d'une partie ── */
 
 static void lancer_partie(int c1, int c2, int est_challenge) {
     int p = -1;
@@ -120,8 +111,8 @@ static void lancer_partie(int c1, int c2, int est_challenge) {
     parties[p].id_joueur1     = clients[c1].id;
     parties[p].id_joueur2     = clients[c2].id;
     parties[p].tour_joueur_id = clients[c1].id;
-    parties[p].elo_impact     = 1;          /* par defaut : partie classee */
-    parties[p].elo_mode_pending = est_challenge; /* en attente si challenge */
+    parties[p].elo_impact     = 1;          // par defaut : partie classee 
+    parties[p].elo_mode_pending = est_challenge; // en attente si challenge 
     parties[p].id_challengeur   = est_challenge ? clients[c1].id : 0;
     init_grille(parties[p].grille);
 
@@ -130,7 +121,6 @@ static void lancer_partie(int c1, int c2, int est_challenge) {
     clients[c1].id_partie_actuelle = parties[p].id_partie;
     clients[c2].id_partie_actuelle = parties[p].id_partie;
 
-    /* PUSH_MATCH_FOUND */
     PayloadMatchFound pmf;
     pmf.id_partie     = parties[p].id_partie;
     pmf.est_challenge = est_challenge;
@@ -146,10 +136,10 @@ static void lancer_partie(int c1, int c2, int est_challenge) {
     envoyer_message(clients[c2].socket, PUSH_MATCH_FOUND, &pmf, sizeof(pmf));
 
     if (est_challenge) {
-        /* Demander au challengeur (c1) de choisir le mode ELO avant le premier coup */
+        // Demander au challengeur (c1) de choisir le mode ELO avant le premier coup
         envoyer_message(clients[c1].socket, PUSH_CHOOSE_ELO, NULL, 0);
     } else {
-        /* Matchmaking : envoyer directement la grille */
+        // Matchmaking : envoyer directement la grille
         PayloadGrid pg;
         memcpy(pg.grille, parties[p].grille, sizeof(parties[p].grille));
         pg.tour_de_jeu = parties[p].tour_joueur_id;
@@ -163,7 +153,6 @@ static void lancer_partie(int c1, int c2, int est_challenge) {
            parties[p].id_partie, clients[c1].pseudo, clients[c2].pseudo, est_challenge);
 }
 
-/* ── Helpers fin de partie ── */
 
 static void terminer_partie(int p, int id_vainqueur, int match_nul) {
     int c1 = get_by_id(parties[p].id_joueur1);
@@ -193,7 +182,7 @@ static void terminer_partie(int p, int id_vainqueur, int match_nul) {
         if (c2 != -1) clients[c2].elo = nv_elo2;
     }
 
-    /* Points et statistiques */
+    // Points et statistiques
     int pts1 = 0, pts2 = 0;
     if (match_nul) { pts1 = pts2 = 1; }
     else if (id_vainqueur == parties[p].id_joueur1) { pts1 = 3; }
@@ -258,12 +247,11 @@ static void terminer_partie(int p, int id_vainqueur, int match_nul) {
     parties[p].active = 0;
 }
 
-/* ── Traitement des messages ── */
+// Traitement des messages 
 
 static void traiter_message(int ci, Header *h, void *payload) {
     int sd = clients[ci].socket;
 
-    /* === ETAT_MENU === */
     if (clients[ci].etat == ETAT_MENU) {
 
         if (h->type == REQ_LOGIN && h->payload_size == (int)sizeof(PayloadLogin)) {
@@ -324,7 +312,6 @@ static void traiter_message(int ci, Header *h, void *payload) {
         }
 
         else if (h->type == REQ_ADD_FRIEND) {
-            /* Desactive : utiliser REQ_FRIEND_REQUEST a la place */
             PayloadError pe = {7};
             envoyer_message(sd, RES_ERROR_STATE, &pe, sizeof(pe));
         }
@@ -334,14 +321,14 @@ static void traiter_message(int ci, Header *h, void *payload) {
             pfr->pseudo_cible[31] = '\0';
             int a = get_by_pseudo(pfr->pseudo_cible);
             if (a == -1) {
-                /* Joueur hors ligne ou inexistant */
+                // Joueur hors ligne ou inexistant
                 PayloadError pe = {4};
                 envoyer_message(sd, RES_ERROR_STATE, &pe, sizeof(pe));
             } else if (a == ci) {
                 PayloadError pe = {5};
                 envoyer_message(sd, RES_ERROR_STATE, &pe, sizeof(pe));
             } else {
-                /* Verifier si deja ami */
+                // Verifier si deja ami
                 int deja = 0;
                 for (int k = 0; k < clients[ci].nb_amis; k++) {
                     if (clients[ci].amis[k] == clients[a].id) { deja = 1; break; }
@@ -370,7 +357,7 @@ static void traiter_message(int ci, Header *h, void *payload) {
                 envoyer_message(sd, RES_FRIEND_ADDED, NULL, 0);
                 if (a != -1) envoyer_message(clients[a].socket, RES_FRIEND_ADDED, NULL, 0);
             } else {
-                /* Notifier le demandeur du refus */
+                // Notifier le demandeur du refus
                 if (a != -1) {
                     PayloadError pe = {6};
                     envoyer_message(clients[a].socket, RES_ERROR_STATE, &pe, sizeof(pe));
@@ -416,7 +403,6 @@ static void traiter_message(int ci, Header *h, void *payload) {
             PayloadLeaderboard lb;
             memset(&lb, 0, sizeof(lb));
 
-            /* Tableau temporaire pour le tri (max 200 profils) */
             #define MAX_PROFILS_SCAN 200
             ProfilSauvegarde tmp[MAX_PROFILS_SCAN];
             int nb_tmp = 0;
@@ -439,7 +425,7 @@ static void traiter_message(int ci, Header *h, void *payload) {
                 closedir(d);
             }
 
-            /* Tri par ELO decroissant (tri bulle simple) */
+            // Tri par ELO decroissant (tri bulle simple)
             for (int x = 0; x < nb_tmp - 1; x++) {
                 for (int y = 0; y < nb_tmp - 1 - x; y++) {
                     if (tmp[y].elo < tmp[y+1].elo) {
@@ -450,7 +436,7 @@ static void traiter_message(int ci, Header *h, void *payload) {
                 }
             }
 
-            /* Remplir le payload (top MAX_CLASSEMENT) */
+            // Remplir le payload (top MAX_CLASSEMENT)
             lb.nb = (nb_tmp < MAX_CLASSEMENT) ? nb_tmp : MAX_CLASSEMENT;
             for (int x = 0; x < lb.nb; x++) {
                 strncpy(lb.pseudo[x], tmp[x].pseudo, 31);
@@ -484,7 +470,6 @@ static void traiter_message(int ci, Header *h, void *payload) {
             int a = get_by_id(pcr->id_challengeur);
             if (a != -1) {
                 if (pcr->accepte) {
-                    /* c1 = challengeur, c2 = accepteur */
                     lancer_partie(a, ci, 1);
                 } else {
                     PayloadError pe = {3};
@@ -494,7 +479,6 @@ static void traiter_message(int ci, Header *h, void *payload) {
         }
     }
 
-    /* === ETAT_MATCHMAKING === */
     else if (clients[ci].etat == ETAT_MATCHMAKING) {
         if (h->type == REQ_CANCEL_MATCH) {
             clients[ci].etat = ETAT_MENU;
@@ -516,10 +500,9 @@ static void traiter_message(int ci, Header *h, void *payload) {
         }
     }
 
-    /* === ETAT_EN_JEU === */
     else if (clients[ci].etat == ETAT_EN_JEU) {
 
-        /* Choix du mode ELO (challenge uniquement, avant le premier coup) */
+        // Choix du mode ELO (challenge uniquement, avant le premier coup)
         if (h->type == REQ_SET_ELO_MODE && h->payload_size == (int)sizeof(PayloadSetEloMode)) {
             PayloadSetEloMode *psm = (PayloadSetEloMode *)payload;
             int p = get_partie(clients[ci].id_partie_actuelle);
@@ -527,7 +510,6 @@ static void traiter_message(int ci, Header *h, void *payload) {
                 parties[p].elo_impact      = psm->elo_impact;
                 parties[p].elo_mode_pending = 0;
 
-                /* Maintenant on peut envoyer la grille et le PUSH_TURN */
                 int c1 = get_by_id(parties[p].id_joueur1);
                 int c2 = get_by_id(parties[p].id_joueur2);
                 PayloadGrid pg;
@@ -547,7 +529,6 @@ static void traiter_message(int ci, Header *h, void *payload) {
         int p = get_partie(clients[ci].id_partie_actuelle);
         if (p == -1) return;
 
-        /* Filtrage : attente choix ELO avant premier coup */
         if (parties[p].elo_mode_pending) {
             PayloadError pe = {5};
             envoyer_message(sd, RES_MOVE_ERROR, &pe, sizeof(pe));
@@ -649,7 +630,7 @@ int main(void) {
             }
         }
 
-        /* Matchmaking automatique */
+        // Matchmaking automatique
         int id1, id2;
         if (matchmake(clients, MAX_CLIENTS, &id1, &id2)) {
             int c1 = get_by_id(id1), c2 = get_by_id(id2);

@@ -19,19 +19,10 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-/* -----------------------------------------------------------------------
- * Macros utilitaires
- * ----------------------------------------------------------------------- */
 
-/** Verifie que sts != -1 ; affiche msg et quitte sinon. */
 #define MCS_CHECK(sts, msg) if ((sts)==-1) { perror(msg); exit(-1); }
 
-/** Affiche msg et attend une entree clavier. */
 #define MCS_PAUSE(msg) printf("%s [Appuyez sur entree pour continuer]", msg); getchar();
-
-/* -----------------------------------------------------------------------
- * Structure socket_t
- * ----------------------------------------------------------------------- */
 
 /**
  * \struct  socket_mcs
@@ -46,26 +37,17 @@ struct socket_mcs {
 
 typedef struct socket_mcs socket_t;
 
-/* -----------------------------------------------------------------------
- * Prototypes
- * ----------------------------------------------------------------------- */
 
-/** Remplit une sockaddr_in a partir d'une IP et d'un port. */
 void mcs_adr2struct(struct sockaddr_in *addr, char *adrIP, short port);
 
-/** Cree une socket TCP ou UDP (sans adresse). */
 socket_t mcs_creerSocket(int mode);
 
-/** Cree une socket liee a une adresse locale. */
 socket_t mcs_creerSocketAdr(int mode, char *adrIP, short port);
 
-/** Cree une socket d'ecoute TCP prete a accepter des clients. */
 socket_t mcs_creerSocketEcoute(char *adrIP, short port);
 
-/** Accepte un client en attente sur une socket d'ecoute. */
 socket_t mcs_accepterClt(const socket_t sockEcoute);
 
-/** Cree une socket TCP et se connecte au serveur indique. */
 socket_t mcs_connecterClt2Srv(char *adrIP, short port);
 
-#endif /* SESSION_MCS_H */
+#endif 

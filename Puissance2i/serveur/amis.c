@@ -1,14 +1,6 @@
 #include "amis.h"
 #include <string.h>
 
-/* =========================================================
- * amis.c -- Gestion de la liste d'amis côté serveur
- * ========================================================= */
-
-/**
- * Recherche un client par pseudo dans le tableau global.
- * Retourne son index ou -1 si introuvable.
- */
 static int trouver_client_par_pseudo(ClientInfo *clients, int nb_max, const char *pseudo) {
     for (int i = 0; i < nb_max; i++) {
         if (clients[i].socket != 0 && strcmp(clients[i].pseudo, pseudo) == 0) {
@@ -20,12 +12,11 @@ static int trouver_client_par_pseudo(ClientInfo *clients, int nb_max, const char
 
 int ajouter_ami(ClientInfo *client, ClientInfo *clients_global, int nb_max, const char *pseudo_ami) {
     int idx = trouver_client_par_pseudo(clients_global, nb_max, pseudo_ami);
-    if (idx == -1) return 0; /* Joueur introuvable */
+    if (idx == -1) return 0; 
 
     int id_ami = clients_global[idx].id;
-    if (id_ami == client->id) return 0; /* On ne peut pas s'ajouter soi-même */
+    if (id_ami == client->id) return 0; 
 
-    /* Vérifier si déjà ami */
     for (int i = 0; i < client->nb_amis; i++) {
         if (client->amis[i] == id_ami) return 0;
     }
@@ -39,14 +30,13 @@ int ajouter_ami(ClientInfo *client, ClientInfo *clients_global, int nb_max, cons
 int supprimer_ami(ClientInfo *client, int id_ami) {
     for (int i = 0; i < client->nb_amis; i++) {
         if (client->amis[i] == id_ami) {
-            /* Decale les entrees suivantes */
             for (int j = i; j < client->nb_amis - 1; j++)
                 client->amis[j] = client->amis[j + 1];
             client->nb_amis--;
             return 1;
         }
     }
-    return 0; /* Pas trouve */
+    return 0; 
 }
 
 void construire_liste_amis(ClientInfo *client, ClientInfo *clients_global, int nb_max, PayloadFriendList *out) {

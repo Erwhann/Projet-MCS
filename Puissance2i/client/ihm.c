@@ -1,17 +1,9 @@
-/* =========================================================
- * ihm.c -- Interface NCURSES coloree pour le client Puissance 2i
- * ZERO accent dans toutes les chaines de caracteres.
- * ========================================================= */
 
 #include "ihm.h"
 #include "../reseau/data.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-/* ================================================================
- * Helpers
- * ================================================================ */
 
 static void bandeau(const char *titre) {
     attron(COLOR_PAIR(COL_TITRE) | A_BOLD);
@@ -27,7 +19,6 @@ static void ligne(int y) {
     attroff(COLOR_PAIR(COL_NORMAL));
 }
 
-/* Efface l'ecran ET applique le fond colore sur tout le terminal */
 static void ecran_effacer(void) {
     bkgd(COLOR_PAIR(COL_NORMAL));
     clear();
@@ -41,10 +32,6 @@ static void kv(int y, int x, const char *label, const char *val) {
     printw("%s", val);
     attroff(COLOR_PAIR(COL_ACCENT) | A_BOLD);
 }
-
-/* ================================================================
- * Init / arret
- * ================================================================ */
 
 void init_ihm(void) {
     initscr();
@@ -73,10 +60,6 @@ void init_ihm(void) {
 void fin_ihm(void) {
     endwin();
 }
-
-/* ================================================================
- * Saisie du pseudo (bloquante)
- * ================================================================ */
 
 void demander_pseudo_ncurses(char *pseudo, const char *suggestion) {
     timeout(-1);
@@ -107,10 +90,6 @@ void demander_pseudo_ncurses(char *pseudo, const char *suggestion) {
     timeout(50);
 }
 
-/* ================================================================
- * Saisie en overlay
- * ================================================================ */
-
 int saisir_chaine_overlay(const char *invite, char *buf, int maxlen) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
@@ -136,10 +115,6 @@ int saisir_chaine_overlay(const char *invite, char *buf, int maxlen) {
     timeout(50);
     return (buf[0] != '\0') ? 1 : 0;
 }
-
-/* ================================================================
- * 1. Menu principal
- * ================================================================ */
 
 void dessiner_menu(const ClientInfo *moi) {
     const char *statuts[] = {"En ligne", "Occupe", "Absent"};
@@ -175,10 +150,6 @@ void dessiner_menu(const ClientInfo *moi) {
     refresh();
 }
 
-/* ================================================================
- * 2. Matchmaking
- * ================================================================ */
-
 void dessiner_matchmaking(void) {
     ecran_effacer();
     bandeau("             RECHERCHE DE PARTIE        ");
@@ -191,10 +162,6 @@ void dessiner_matchmaking(void) {
     attroff(COLOR_PAIR(COL_NORMAL));
     refresh();
 }
-
-/* ================================================================
- * 3. En jeu
- * ================================================================ */
 
 void dessiner_partie(const ClientInfo *moi, const PartieInfo *partie, const char *msg) {
     ecran_effacer();
@@ -237,7 +204,6 @@ void dessiner_partie(const ClientInfo *moi, const PartieInfo *partie, const char
     attron(COLOR_PAIR(COL_MOI));  mvprintw(14, 4, " O = Vous");  attroff(COLOR_PAIR(COL_MOI));
     attron(COLOR_PAIR(COL_ADV));  printw("   X = Adversaire");   attroff(COLOR_PAIR(COL_ADV));
 
-    /* Indicateur partie amicale */
     if (!partie->elo_impact) {
         attron(COLOR_PAIR(COL_ACCENT));
         mvprintw(14, 35, "[Partie amicale - sans ELO]");
@@ -250,10 +216,6 @@ void dessiner_partie(const ClientInfo *moi, const PartieInfo *partie, const char
     attroff(COLOR_PAIR(COL_ACCENT) | A_BOLD);
     refresh();
 }
-
-/* ================================================================
- * 4. Fin de partie
- * ================================================================ */
 
 void dessiner_fin_partie(const ClientInfo *moi, int id_vainqueur, int points, int nv_elo, int ancien_elo) {
     ecran_effacer();
@@ -286,10 +248,6 @@ void dessiner_fin_partie(const ClientInfo *moi, int id_vainqueur, int points, in
     attroff(COLOR_PAIR(COL_NORMAL));
     refresh();
 }
-
-/* ================================================================
- * 5. Liste d'amis
- * ================================================================ */
 
 void dessiner_amis(const PayloadFriendList *liste) {
     ecran_effacer();
@@ -331,10 +289,6 @@ void dessiner_amis(const PayloadFriendList *liste) {
     refresh();
 }
 
-/* ================================================================
- * 6. Profil
- * ================================================================ */
-
 void dessiner_profil(const ClientInfo *moi) {
     ecran_effacer();
     bandeau("           MON PROFIL COMPLET          ");
@@ -367,10 +321,6 @@ void dessiner_profil(const ClientInfo *moi) {
     refresh();
 }
 
-/* ================================================================
- * 7. Changer statut
- * ================================================================ */
-
 void dessiner_statut(int statut_actuel) {
     const char *labels[] = {"En ligne", "Occupe", "Absent"};
     ecran_effacer();
@@ -391,10 +341,6 @@ void dessiner_statut(int statut_actuel) {
     refresh();
 }
 
-/* ================================================================
- * 8. Choix ELO / amicale (challenge uniquement)
- * ================================================================ */
-
 void dessiner_choisir_elo(void) {
     ecran_effacer();
     bandeau("           MODE DE LA PARTIE           ");
@@ -409,10 +355,6 @@ void dessiner_choisir_elo(void) {
     attroff(COLOR_PAIR(COL_NORMAL));
     refresh();
 }
-
-/* ================================================================
- * 10. Classement ELO
- * ================================================================ */
 
 void dessiner_classement(const PayloadLeaderboard *lb) {
     ecran_effacer();
@@ -450,10 +392,6 @@ void dessiner_classement(const PayloadLeaderboard *lb) {
     refresh();
 }
 
-/* ================================================================
- * 9. Notification
- * ================================================================ */
-
 void dessiner_notification(const char *msg) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
@@ -463,10 +401,6 @@ void dessiner_notification(const char *msg) {
     attroff(COLOR_PAIR(COL_NOTIF) | A_BOLD);
     refresh();
 }
-
-/* ================================================================
- * traiter_message_serveur
- * ================================================================ */
 
 void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
                              PartieInfo *partie, PayloadFriendList *amis,
@@ -489,7 +423,6 @@ void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
     }
 
     case RES_WAITING:
-        /* ACK : annulation matchmaking ou changement statut */
         if (*etat_ihm == IHM_MATCHMAKING || *etat_ihm == IHM_STATUT) {
             *etat_ihm = IHM_MENU;
             dessiner_menu(moi);
@@ -511,7 +444,6 @@ void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
     }
 
     case PUSH_CHOOSE_ELO:
-        /* Le serveur demande au challengeur de choisir le mode */
         *etat_ihm = IHM_CHOISIR_ELO;
         dessiner_choisir_elo();
         break;
@@ -627,26 +559,19 @@ void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
     }
 }
 
-/* ================================================================
- * traiter_saisie
- * ================================================================ */
-
 void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
                     PayloadFriendList *amis, int *etat_ihm,
                     int *challenge_en_attente, int challenger_id, int sock)
 {
     (void)partie;
 
-    /* Defi ou demande d'ami entrant : priorite absolue */
     if (*challenge_en_attente && (ch == 'o' || ch == 'O' || ch == 'n' || ch == 'N')) {
         if (*challenge_en_attente == 1) {
-            /* Defi de jeu */
             PayloadChallengeResponse pcr;
             pcr.accepte        = (ch == 'o' || ch == 'O') ? 1 : 0;
             pcr.id_challengeur = challenger_id;
             envoyer_message(sock, RES_CHALLENGE_ACCEPT, &pcr, sizeof(pcr));
         } else if (*challenge_en_attente == 2) {
-            /* Demande d'ami */
             PayloadFriendResponse pfr;
             pfr.accepte      = (ch == 'o' || ch == 'O') ? 1 : 0;
             pfr.id_demandeur = challenger_id;
@@ -742,10 +667,9 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
         }
         else if ((ch == 'd' || ch == 'D') && amis->nb_amis > 0) {
             dessiner_notification("Numero de l'ami a defier (1-N) :");
-            /* Passer en bloquant le temps de lire un chiffre */
             timeout(-1);
             int c2 = getch();
-            timeout(50); /* retour non-bloquant */
+            timeout(50); 
             if (c2 >= '1' && c2 <= '9') {
                 int idx = c2 - '1';
                 if (idx < amis->nb_amis && amis->en_ligne[idx]) {
@@ -770,14 +694,12 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
         break;
 
     case IHM_STATUT:
-        /* 1/2/3 = choix statut, q = retour */
         if (ch == '1' || ch == '2' || ch == '3') {
-            int nouveau = ch - '1'; /* 0=en_ligne, 1=occupe, 2=absent */
+            int nouveau = ch - '1'; 
             moi->etat_social = (EtatSocial)nouveau;
             PayloadChangeState pcs;
             pcs.etat_social = nouveau;
             envoyer_message(sock, REQ_CHANGE_STATE, &pcs, sizeof(pcs));
-            /* Retour au menu confirme par RES_WAITING (ACK serveur) */
         } else if (ch == 'q' || ch == 'Q') {
             *etat_ihm = IHM_MENU;
             dessiner_menu(moi);
@@ -785,12 +707,10 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
         break;
 
     case IHM_CHOISIR_ELO:
-        /* Seul le challengeur atteint cet etat */
         if (ch == 'o' || ch == 'O') {
             PayloadSetEloMode psm; psm.elo_impact = 1;
             partie->elo_impact = 1;
             envoyer_message(sock, REQ_SET_ELO_MODE, &psm, sizeof(psm));
-            /* PUSH_GRID/PUSH_TURN viendront du serveur */
         } else if (ch == 'n' || ch == 'N') {
             PayloadSetEloMode psm; psm.elo_impact = 0;
             partie->elo_impact = 0;

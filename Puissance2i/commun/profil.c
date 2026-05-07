@@ -1,13 +1,11 @@
-/* =========================================================
- * profil.c -- Persistance du profil joueur en fichier binaire
- * ========================================================= */
+
 #include "profil.h"
 #include <stdio.h>
 #include <string.h>
 
 int charger_profil(const char *chemin, ProfilSauvegarde *ps) {
     FILE *f = fopen(chemin, "rb");
-    if (!f) return 0; /* Fichier inexistant, nouveau joueur */
+    if (!f) return 0; 
 
     size_t lu = fread(ps, sizeof(ProfilSauvegarde), 1, f);
     fclose(f);

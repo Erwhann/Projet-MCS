@@ -1,7 +1,4 @@
-/* =========================================================
- * ihm.h -- Interface NCURSES pour le client Puissance 2i
- * Aucun accent dans les chaines de caracteres.
- * ========================================================= */
+
 #ifndef IHM_H
 #define IHM_H
 
@@ -9,14 +6,11 @@
 #include "../commun/structures.h"
 #include <ncurses.h>
 
-/* --- Init / arret --- */
 void init_ihm(void);
 void fin_ihm(void);
 
-/* --- Saisie du pseudo (bloquante) --- */
 void demander_pseudo_ncurses(char *pseudo, const char *suggestion);
 
-/* --- Ecrans --- */
 void dessiner_menu(const ClientInfo *moi);
 void dessiner_matchmaking(void);
 void dessiner_partie(const ClientInfo *moi, const PartieInfo *partie, const char *msg);
@@ -27,11 +21,7 @@ void dessiner_statut(int statut_actuel);
 void dessiner_choisir_elo(void);
 void dessiner_classement(const PayloadLeaderboard *lb);
 void dessiner_notification(const char *msg);
-
-/* --- Saisie de chaine en overlay --- */
 int saisir_chaine_overlay(const char *invite, char *buf, int maxlen);
-
-/* --- Handlers asynchrones --- */
 void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
                              PartieInfo *partie, PayloadFriendList *amis,
                              int *etat_ihm, int *challenge_en_attente,
@@ -41,19 +31,18 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
                     PayloadFriendList *amis, int *etat_ihm,
                     int *challenge_en_attente, int challenger_id, int sock);
 
-/* --- Etats IHM --- */
 #define IHM_MENU          0
 #define IHM_MATCHMAKING   1
 #define IHM_EN_JEU        2
 #define IHM_FIN_PARTIE    3
 #define IHM_AMIS          4
 #define IHM_PROFIL        5
-#define IHM_STATUT        6   /* Changer statut social */
-#define IHM_CHOISIR_ELO   7   /* Choix partie classee / amicale */
-#define IHM_FRIEND_REQUEST 8  /* Demande d'ami entrante : [o/n] */
-#define IHM_CLASSEMENT    9   /* Classement ELO serveur          */
+#define IHM_STATUT        6   
+#define IHM_CHOISIR_ELO   7   
+#define IHM_FRIEND_REQUEST 8 
+#define IHM_CLASSEMENT    9   
 
-/* --- Paires de couleurs --- */
+
 #define COL_TITRE    1
 #define COL_NORMAL   2
 #define COL_ACCENT   3
@@ -64,4 +53,4 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
 #define COL_ADV      8
 #define COL_NOTIF    9
 
-#endif /* IHM_H */
+#endif 

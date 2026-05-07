@@ -17,10 +17,6 @@
 #define RECV_FLAGS 0
 #define SEND_FLAGS 0
 
-/* -----------------------------------------------------------------------
- * Primitives DGRAM
- * ----------------------------------------------------------------------- */
-
 static void envoyerDGRAM(socket_t *sockEch, char *msg,
                          char *adrDest, short portDest) {
     struct sockaddr_in addr;
@@ -37,10 +33,6 @@ static void recevoirDGRAM(socket_t *sockEch, char *msg, int msgSize) {
         strcpy(msg, "200:QUIT:Deconnexion P2P inattendue");
 }
 
-/* -----------------------------------------------------------------------
- * Primitives STREAM
- * ----------------------------------------------------------------------- */
-
 static void envoyerSTREAM(const socket_t *sockEch, char *msg) {
     send(sockEch->fd, msg, strlen(msg) + 1, SEND_FLAGS);
 }
@@ -50,10 +42,6 @@ static void recevoirSTREAM(const socket_t *sockEch, char *msg, int msgSize) {
     if (nb <= 0)
         strcpy(msg, "200:QUIT:Deconnexion Client inattendue");
 }
-
-/* -----------------------------------------------------------------------
- * API publique
- * ----------------------------------------------------------------------- */
 
 void mcs_envoyer(socket_t *sockEch, mcs_generic quoi, mcs_pFct serial, ...) {
     mcs_buffer_t buff;

@@ -10,14 +10,14 @@ void init_grille(int grille[6][7]) {
 }
 
 int jouer_coup(int grille[6][7], int colonne, int id_joueur) {
-    if (colonne < 0 || colonne >= 7) return 0; // Col invalide
-    for (int i = 5; i >= 0; i--) { // De bas en haut
+    if (colonne < 0 || colonne >= 7) return 0; 
+    for (int i = 5; i >= 0; i--) { 
         if (grille[i][colonne] == 0) {
             grille[i][colonne] = id_joueur;
-            return 1; // Succès
+            return 1; 
         }
     }
-    return 0; // Colonne pleine
+    return 0; 
 }
 
 int verifier_victoire(int grille[6][7], int id_joueur) {
