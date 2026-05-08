@@ -27,3 +27,6 @@ bin/client: $(OBJS_CLT)
 
 clean:
 	rm -f $(OBJS_SRV) $(OBJS_CLT) bin/serveur bin/client
+
+init:
+	rm -f profils/*.dat

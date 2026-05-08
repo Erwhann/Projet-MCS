@@ -1,16 +1,25 @@
+/*
+Nom du fichier : ihm.h
+Auteurs : Erwhann Deiss, Dorian Pazdziej, Matteo Delattre
+Description : en-tete de l'interface graphique du jeu puissance 2i
+*/
 
 #ifndef IHM_H
 #define IHM_H
 
+// inclusions des bibliothèques nécessaires
 #include "../commun/protocol.h"
 #include "../commun/structures.h"
 #include <ncurses.h>
 
+// prototypes des fonctions d'initialisation et de fermeture
 void init_ihm(void);
 void fin_ihm(void);
 
+// prototype de la fonction de saisie du pseudo
 void demander_pseudo_ncurses(char *pseudo, const char *suggestion);
 
+// prototypes des fonctions d'affichage
 void dessiner_menu(const ClientInfo *moi);
 void dessiner_matchmaking(void);
 void dessiner_partie(const ClientInfo *moi, const PartieInfo *partie, const char *msg);
@@ -22,7 +31,9 @@ void dessiner_choisir_elo(void);
 void dessiner_classement(const PayloadLeaderboard *lb);
 void dessiner_tournoi(const PayloadTournamentState *t);
 void dessiner_notification(const char *msg);
+// prototype de la fonction de saisie d'une chaine de caractères en overlay
 int saisir_chaine_overlay(const char *invite, char *buf, int maxlen);
+// prototypes des fonctions de traitement des messages et des saisies
 void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
                              PartieInfo *partie, PayloadFriendList *amis,
                              int *etat_ihm, int *challenge_en_attente,
@@ -32,19 +43,20 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
                     PayloadFriendList *amis, int *etat_ihm,
                     int *challenge_en_attente, int challenger_id, int sock);
 
+// constantes des etats de l'interface graphique
 #define IHM_MENU          0
 #define IHM_MATCHMAKING   1
 #define IHM_EN_JEU        2
 #define IHM_FIN_PARTIE    3
 #define IHM_AMIS          4
 #define IHM_PROFIL        5
-#define IHM_STATUT        6   
-#define IHM_CHOISIR_ELO   7   
-#define IHM_FRIEND_REQUEST 8 
-#define IHM_CLASSEMENT    9   
-#define IHM_TOURNOI       10  
+#define IHM_STATUT        6   // ecran de changement de statut
+#define IHM_CHOISIR_ELO   7   // ecran de choix du mode ELO (challenge)
+#define IHM_FRIEND_REQUEST 8  // en attente d'une reponse a une demande d'ami
+#define IHM_CLASSEMENT    9   // ecran du classement ELO
+#define IHM_TOURNOI       10  // ecran du tournoi
 
-
+// constantes des paires de couleurs ncurses
 #define COL_TITRE    1
 #define COL_NORMAL   2
 #define COL_ACCENT   3
@@ -55,4 +67,4 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
 #define COL_ADV      8
 #define COL_NOTIF    9
 
-#endif 
+#endif

@@ -1,4 +1,11 @@
+/*
+Nom du programme : serveur.c
+Auteurs : Erwhann Deiss, Dorian Pazdziej, Matteo Delattre
+Description : serveur principal du jeu puissance 2i
+             gere les connexions clients, le matchmaking, les parties et les tournois
+*/
 
+// inclusions des bibliothèques nécessaires
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,20 +23,24 @@
 #include "amis.h"
 #include "tournoi.h"
 
-#define MAX_CLIENTS 50
-#define MAX_PARTIES 25
-#define SRV_PORT    5000
+// constantes du serveur
+#define MAX_CLIENTS 50  // nombre maximum de clients connectes simultanement
+#define MAX_PARTIES 25  // nombre maximum de parties actives simultanement
+#define SRV_PORT    5000 // port d'ecoute du serveur
 
+// tableaux globaux des clients connectes et des parties en cours
 static ClientInfo clients[MAX_CLIENTS];
 static PartieInfo parties[MAX_PARTIES];
+// compteurs pour generer des identifiants uniques
 static int next_client_id = 1;
 static int next_partie_id = 1;
 
-/** Diffuse l'état courant du tournoi à tous ses participants. */
+// diffuse l'etat courant du tournoi a tous ses participants
 static void diffuser_etat_tournoi(void) {
     if (g_tournoi.nb_joueurs == 0) return;
     PayloadTournamentState pts;
     tournoi_construire_etat(&pts);
+    // on envoie l'etat a chaque client participant au tournoi
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (clients[i].socket != 0 && tournoi_est_participant(clients[i].id))
             envoyer_message(clients[i].socket, PUSH_TOURNAMENT_STATE,
@@ -37,19 +48,21 @@ static void diffuser_etat_tournoi(void) {
     }
 }
 
-
+// retourne l'index du client dans le tableau par son identifiant, -1 si introuvable
 static int get_by_id(int id) {
     for (int i = 0; i < MAX_CLIENTS; i++)
         if (clients[i].socket != 0 && clients[i].id == id) return i;
     return -1;
 }
 
+// retourne l'index du client dans le tableau par son pseudo, -1 si introuvable
 static int get_by_pseudo(const char *pseudo) {
     for (int i = 0; i < MAX_CLIENTS; i++)
         if (clients[i].socket != 0 && strcmp(clients[i].pseudo, pseudo) == 0) return i;
     return -1;
 }
 
+// retourne l'index de la partie dans le tableau par son identifiant, -1 si introuvable
 static int get_partie(int id) {
     for (int i = 0; i < MAX_PARTIES; i++)
         if (parties[i].active && parties[i].id_partie == id) return i;
@@ -57,20 +70,24 @@ static int get_partie(int id) {
 }
 
 
+// nettoyer_client : deconnecte proprement un client
+// sauvegarde son profil, gere la partie en cours et retire du tournoi
 static void nettoyer_client(int i) {
     if (clients[i].socket == 0) return;
     printf("[SRV] '%s' (ID=%d) deconnecte.\n", clients[i].pseudo, clients[i].id);
     fermer_socket(clients[i].socket);
-    
+
+    // on retire le joueur du tournoi s'il y participait
     tournoi_quitter(clients[i].id);
 
+    // on sauvegarde le profil du client sur disque
     if (clients[i].pseudo[0] != '\0') {
         char path[512];
         snprintf(path, sizeof(path), "profils/%s.dat", clients[i].pseudo);
         ProfilSauvegarde ps;
         memset(&ps, 0, sizeof(ps));
         charger_profil(path, &ps);
-        
+        // on met a jour les donnees du profil
         strncpy(ps.pseudo, clients[i].pseudo, 31);
         ps.pseudo[31] = '\0';
         ps.elo = clients[i].elo;
@@ -78,7 +95,6 @@ static void nettoyer_client(int i) {
         ps.nb_victoires = clients[i].nb_victoires;
         ps.nb_defaites = clients[i].nb_defaites;
         ps.nb_nuls = clients[i].nb_nuls;
-        
         ps.nb_amis = clients[i].nb_amis;
         for(int a=0; a<clients[i].nb_amis; a++){
             ps.amis[a] = clients[i].amis[a];
@@ -86,6 +102,7 @@ static void nettoyer_client(int i) {
         sauvegarder_profil(path, &ps);
     }
 
+    // si le client etait en partie, l'adversaire remporte la victoire par forfait
     if (clients[i].id_partie_actuelle != 0) {
         int p = get_partie(clients[i].id_partie_actuelle);
         if (p != -1) {
@@ -93,6 +110,7 @@ static void nettoyer_client(int i) {
                          ? parties[p].id_joueur2 : parties[p].id_joueur1;
             int a = get_by_id(adv_id);
             if (a != -1) {
+                // on notifie l'adversaire de sa victoire par forfait
                 PayloadEndGame peg;
                 peg.id_vainqueur  = adv_id;
                 peg.points_gagnes = 3;
@@ -108,53 +126,62 @@ static void nettoyer_client(int i) {
         }
     }
 
+    // on libere le slot du client
     clients[i].socket = 0;
     clients[i].etat   = ETAT_MENU;
     clients[i].id_partie_actuelle = 0;
 }
 
 
+// lancer_partie : cree une nouvelle partie entre deux clients
+// est_challenge = 1 si c'est un defi entre amis, 0 si matchmaking automatique
 static void lancer_partie(int c1, int c2, int est_challenge) {
+    // on cherche un slot de partie libre
     int p = -1;
     for (int i = 0; i < MAX_PARTIES; i++) {
         if (!parties[i].active) { p = i; break; }
     }
     if (p == -1) { fprintf(stderr, "[SRV] Plus de slots de parties.\n"); return; }
 
+    // on initialise la partie
     parties[p].active         = 1;
     parties[p].id_partie      = next_partie_id++;
     parties[p].id_joueur1     = clients[c1].id;
     parties[p].id_joueur2     = clients[c2].id;
-    parties[p].tour_joueur_id = clients[c1].id;
-    parties[p].elo_impact     = 1;          // par defaut : partie classee 
-    parties[p].elo_mode_pending = est_challenge; // en attente si challenge 
+    parties[p].tour_joueur_id = clients[c1].id;      // joueur 1 commence
+    parties[p].elo_impact     = 1;                   // partie classee par defaut
+    parties[p].elo_mode_pending = est_challenge;     // en attente de choix si challenge
     parties[p].id_challengeur   = est_challenge ? clients[c1].id : 0;
     init_grille(parties[p].grille);
 
+    // on met a jour l'etat des deux clients
     clients[c1].etat = ETAT_EN_JEU;
     clients[c2].etat = ETAT_EN_JEU;
     clients[c1].id_partie_actuelle = parties[p].id_partie;
     clients[c2].id_partie_actuelle = parties[p].id_partie;
 
+    // on notifie les deux joueurs que la partie commence
     PayloadMatchFound pmf;
     pmf.id_partie     = parties[p].id_partie;
     pmf.est_challenge = est_challenge;
 
+    // on informe le joueur 1 de son adversaire (joueur 2)
     pmf.id_adversaire = clients[c2].id;
     pmf.elo           = clients[c2].elo;
     strncpy(pmf.pseudo, clients[c2].pseudo, 31); pmf.pseudo[31] = '\0';
     envoyer_message(clients[c1].socket, PUSH_MATCH_FOUND, &pmf, sizeof(pmf));
 
+    // on informe le joueur 2 de son adversaire (joueur 1)
     pmf.id_adversaire = clients[c1].id;
     pmf.elo           = clients[c1].elo;
     strncpy(pmf.pseudo, clients[c1].pseudo, 31); pmf.pseudo[31] = '\0';
     envoyer_message(clients[c2].socket, PUSH_MATCH_FOUND, &pmf, sizeof(pmf));
 
     if (est_challenge) {
-        // Demander au challengeur (c1) de choisir le mode ELO avant le premier coup
+        // en mode defi : on demande au challengeur de choisir le mode ELO
         envoyer_message(clients[c1].socket, PUSH_CHOOSE_ELO, NULL, 0);
     } else {
-        // Matchmaking : envoyer directement la grille
+        // en matchmaking : on envoie directement la grille initiale
         PayloadGrid pg;
         memcpy(pg.grille, parties[p].grille, sizeof(parties[p].grille));
         pg.tour_de_jeu = parties[p].tour_joueur_id;
@@ -694,21 +721,25 @@ static void traiter_message(int ci, Header *h, void *payload) {
     }
 }
 
-/* ── Boucle principale ── */
-
+// boucle principale du serveur
 int main(void) {
+    // initialisation des tableaux globaux
     memset(clients, 0, sizeof(clients));
     memset(parties, 0, sizeof(parties));
 
+    // creation de la socket d'ecoute
     int server_fd = creer_serveur(SRV_PORT);
     printf("[SRV] Serveur Puissance 2i demarre sur le port %d\n", SRV_PORT);
 
+    // creation du dossier de profils si inexistant
     mkdir("profils", 0755);
 
+    // initialisation du tournoi
     tournoi_reset();
 
     fd_set readfds;
     while (1) {
+        // on surveille la socket du serveur et toutes les sockets clients
         FD_ZERO(&readfds);
         FD_SET(server_fd, &readfds);
         int max_sd = server_fd;
@@ -719,39 +750,45 @@ int main(void) {
             }
         }
 
+        // on attend un evenement (timeout 500ms)
         struct timeval tv = {0, 500000};
         if (select(max_sd + 1, &readfds, NULL, NULL, &tv) < 0) { perror("select"); continue; }
 
+        // nouvelle connexion entrante
         if (FD_ISSET(server_fd, &readfds)) {
             struct sockaddr_in addr;
             int ns = accepter_client(server_fd, &addr);
             if (ns >= 0) {
+                // on cherche un slot libre pour le nouveau client
                 for (int i = 0; i < MAX_CLIENTS; i++) {
                     if (clients[i].socket == 0) {
                         memset(&clients[i], 0, sizeof(ClientInfo));
                         clients[i].socket = ns;
                         clients[i].id     = next_client_id++;
                         clients[i].etat   = ETAT_MENU;
-                        clients[i].elo    = 1200;
+                        clients[i].elo    = 1200;  // ELO de depart
                         break;
                     }
                 }
             }
         }
 
+        // traitement des messages des clients connectes
         for (int i = 0; i < MAX_CLIENTS; i++) {
             if (clients[i].socket > 0 && FD_ISSET(clients[i].socket, &readfds)) {
                 Header h; void *p = NULL;
                 if (recevoir_message(clients[i].socket, &h, &p) < 0) {
+                    // deconnexion ou erreur reseau : on nettoie le client
                     nettoyer_client(i);
                 } else {
+                    // on traite le message recu
                     traiter_message(i, &h, p);
                     if (p) free(p);
                 }
             }
         }
 
-        // Matchmaking automatique
+        // matchmaking automatique : on tente d'apparier deux joueurs en attente
         int id1, id2;
         if (matchmake(clients, MAX_CLIENTS, &id1, &id2)) {
             int c1 = get_by_id(id1), c2 = get_by_id(id2);
