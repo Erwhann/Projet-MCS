@@ -12,7 +12,12 @@ SRCS_CLT = client/client.c client/ihm.c \
            commun/profil.c
 OBJS_CLT = $(SRCS_CLT:.c=.o)
 
-all: bin/serveur bin/client
+SRCS_TEST = bin/test_client.c \
+            reseau/session.c reseau/data.c \
+            commun/profil.c
+OBJS_TEST = $(SRCS_TEST:.c=.o)
+
+all: bin/serveur bin/client bin/test_client
 
 bin/serveur: $(OBJS_SRV)
 	@mkdir -p bin
@@ -22,11 +27,15 @@ bin/client: $(OBJS_CLT)
 	@mkdir -p bin
 	$(CC) $(CFLAGS) -o $@ $^ -lncurses
 
+bin/test_client: $(OBJS_TEST)
+	@mkdir -p bin
+	$(CC) $(CFLAGS) -o $@ $^
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS_SRV) $(OBJS_CLT) bin/serveur bin/client
+	rm -f $(OBJS_SRV) $(OBJS_CLT) $(OBJS_TEST) bin/serveur bin/client bin/test_client
 
 init:
 	rm -f profils/*.dat
