@@ -160,4 +160,17 @@ typedef struct {
     int id_challengeur;
 } PartieInfo;
 
+#define MAX_JOUEURS_TOURNOI 4
+
+typedef struct {
+    int  etat;          
+    int  nb_joueurs;
+    char pseudos[MAX_JOUEURS_TOURNOI][32];
+    int  elos[MAX_JOUEURS_TOURNOI];
+    int  vainqueur_sf1;   
+    int  vainqueur_sf2;
+    int  vainqueur_final;
+    char msg[64];         
+} PayloadTournamentState;
+
 #endif 

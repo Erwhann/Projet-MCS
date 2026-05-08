@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=Puissance 2i
+Comment=Lanceur graphique pour le jeu
+Exec=/home/dorian/Documents/MIDDLEWARE/Projet-MCS-main/Puissance2i/lanceur.sh
+Path=/home/dorian/Documents/MIDDLEWARE/Projet-MCS-main/Puissance2i
+Icon=utilities-terminal
+Terminal=false
+Type=Application
+Categories=Game;

@@ -14,6 +14,7 @@
 #include "elo.h"
 #include "matchmaking.h"
 #include "amis.h"
+#include "tournoi.h"
 
 #define MAX_CLIENTS 50
 #define MAX_PARTIES 25
@@ -23,6 +24,18 @@ static ClientInfo clients[MAX_CLIENTS];
 static PartieInfo parties[MAX_PARTIES];
 static int next_client_id = 1;
 static int next_partie_id = 1;
+
+/** Diffuse l'état courant du tournoi à tous ses participants. */
+static void diffuser_etat_tournoi(void) {
+    if (g_tournoi.nb_joueurs == 0) return;
+    PayloadTournamentState pts;
+    tournoi_construire_etat(&pts);
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i].socket != 0 && tournoi_est_participant(clients[i].id))
+            envoyer_message(clients[i].socket, PUSH_TOURNAMENT_STATE,
+                            &pts, sizeof(pts));
+    }
+}
 
 
 static int get_by_id(int id) {
@@ -48,6 +61,8 @@ static void nettoyer_client(int i) {
     if (clients[i].socket == 0) return;
     printf("[SRV] '%s' (ID=%d) deconnecte.\n", clients[i].pseudo, clients[i].id);
     fermer_socket(clients[i].socket);
+    
+    tournoi_quitter(clients[i].id);
 
     if (clients[i].pseudo[0] != '\0') {
         char path[512];
@@ -154,6 +169,9 @@ static void lancer_partie(int c1, int c2, int est_challenge) {
 }
 
 
+/* Déclarée ici pour pouvoir être appelée depuis terminer_partie */
+static void lancer_partie(int c1, int c2, int est_challenge);
+
 static void terminer_partie(int p, int id_vainqueur, int match_nul) {
     int c1 = get_by_id(parties[p].id_joueur1);
     int c2 = get_by_id(parties[p].id_joueur2);
@@ -244,7 +262,60 @@ static void terminer_partie(int p, int id_vainqueur, int match_nul) {
         for(int a=0; a<clients[c2].nb_amis; a++) ps.amis[a] = clients[c2].amis[a];
         sauvegarder_profil(path, &ps);
     }
+
+    /* ── Avancement du bracket tournoi ── */
+    int id_partie_termine = parties[p].id_partie;
     parties[p].active = 0;
+
+    if (g_tournoi.etat == TOURNOI_DEMI_FINALES || g_tournoi.etat == TOURNOI_FINALE) {
+        int midx = tournoi_get_match_idx(id_partie_termine);
+        if (midx != -1) {
+            if (match_nul) {
+                /* Match nul en tournoi : rejouer */
+                printf("[TOURNOI] Match nul en tournoi (match %d), replay.\n", midx);
+                int j1 = g_tournoi.match_j1[midx];
+                int j2 = g_tournoi.match_j2[midx];
+                int nc1 = get_by_id(j1), nc2 = get_by_id(j2);
+                if (nc1 != -1 && nc2 != -1) {
+                    clients[nc1].etat = ETAT_MENU;
+                    clients[nc2].etat = ETAT_MENU;
+                    lancer_partie(nc1, nc2, 0);
+                    int np = get_partie(clients[nc1].id_partie_actuelle);
+                    if (np != -1) {
+                        tournoi_enregistrer_partie(midx, parties[np].id_partie);
+                        parties[np].elo_impact = 0;
+                    }
+                }
+            } else {
+                /* Le vainqueur reste en ETAT_TOURNOI */
+                int cv = get_by_id(id_vainqueur);
+                if (cv != -1) clients[cv].etat = ETAT_TOURNOI;
+
+                int next_j1, next_j2;
+                if (tournoi_notifier_fin_partie(id_partie_termine, id_vainqueur,
+                                               &next_j1, &next_j2)) {
+                    /* Lancer la finale */
+                    int nc1 = get_by_id(next_j1), nc2 = get_by_id(next_j2);
+                    if (nc1 != -1 && nc2 != -1) {
+                        clients[nc1].etat = ETAT_MENU;
+                        clients[nc2].etat = ETAT_MENU;
+                        lancer_partie(nc1, nc2, 0);
+                        int np = get_partie(clients[nc1].id_partie_actuelle);
+                        if (np != -1) {
+                            tournoi_enregistrer_partie(2, parties[np].id_partie);
+                            parties[np].elo_impact = 0;
+                        }
+                    }
+                } else if (g_tournoi.etat == TOURNOI_TERMINE) {
+                    /* Finale terminee : reset apres diffusion */
+                    diffuser_etat_tournoi();
+                    tournoi_reset();
+                    return;
+                }
+            }
+            diffuser_etat_tournoi();
+        }
+    }
 }
 
 // Traitement des messages 
@@ -436,7 +507,6 @@ static void traiter_message(int ci, Header *h, void *payload) {
                 }
             }
 
-            // Remplir le payload (top MAX_CLASSEMENT)
             lb.nb = (nb_tmp < MAX_CLASSEMENT) ? nb_tmp : MAX_CLASSEMENT;
             for (int x = 0; x < lb.nb; x++) {
                 strncpy(lb.pseudo[x], tmp[x].pseudo, 31);
@@ -447,6 +517,55 @@ static void traiter_message(int ci, Header *h, void *payload) {
                 lb.nb_nuls[x]      = tmp[x].nb_nuls;
             }
             envoyer_message(sd, PUSH_LEADERBOARD, &lb, sizeof(lb));
+        }
+
+        else if (h->type == REQ_JOIN_TOURNAMENT) {
+            if (tournoi_est_participant(clients[ci].id)) {
+                clients[ci].etat = ETAT_TOURNOI;
+                envoyer_message(sd, RES_TOURNAMENT_JOINED, NULL, 0);
+                PayloadTournamentState pts;
+                tournoi_construire_etat(&pts);
+                envoyer_message(sd, PUSH_TOURNAMENT_STATE, &pts, sizeof(pts));
+            } else if (g_tournoi.etat != TOURNOI_ATTENTE) {
+                PayloadError pe = {1};
+                envoyer_message(sd, RES_TOURNAMENT_ERROR, &pe, sizeof(pe));
+            } else if (!tournoi_rejoindre(clients[ci].id, clients[ci].pseudo, clients[ci].elo)) {
+                PayloadError pe = {2};
+                envoyer_message(sd, RES_TOURNAMENT_ERROR, &pe, sizeof(pe));
+            } else {
+                clients[ci].etat = ETAT_TOURNOI;
+                envoyer_message(sd, RES_TOURNAMENT_JOINED, NULL, 0);
+                diffuser_etat_tournoi();
+
+                if (tournoi_pret()) {
+                    int sf1_j1, sf1_j2, sf2_j1, sf2_j2;
+                    tournoi_demarrer(&sf1_j1, &sf1_j2, &sf2_j1, &sf2_j2);
+                    diffuser_etat_tournoi();
+
+                    int c1 = get_by_id(sf1_j1), c2 = get_by_id(sf1_j2);
+                    if (c1 != -1 && c2 != -1) {
+                        clients[c1].etat = ETAT_MENU;
+                        clients[c2].etat = ETAT_MENU;
+                        lancer_partie(c1, c2, 0);
+                        int pp = get_partie(clients[c1].id_partie_actuelle);
+                        if (pp != -1) {
+                            tournoi_enregistrer_partie(0, parties[pp].id_partie);
+                            parties[pp].elo_impact = 0;
+                        }
+                    }
+                    int c3 = get_by_id(sf2_j1), c4 = get_by_id(sf2_j2);
+                    if (c3 != -1 && c4 != -1) {
+                        clients[c3].etat = ETAT_MENU;
+                        clients[c4].etat = ETAT_MENU;
+                        lancer_partie(c3, c4, 0);
+                        int pp = get_partie(clients[c3].id_partie_actuelle);
+                        if (pp != -1) {
+                            tournoi_enregistrer_partie(1, parties[pp].id_partie);
+                            parties[pp].elo_impact = 0;
+                        }
+                    }
+                }
+            }
         }
 
         else if (h->type == REQ_CHALLENGE && h->payload_size == (int)sizeof(PayloadChallenge)) {
@@ -585,6 +704,8 @@ int main(void) {
     printf("[SRV] Serveur Puissance 2i demarre sur le port %d\n", SRV_PORT);
 
     mkdir("profils", 0755);
+
+    tournoi_reset();
 
     fd_set readfds;
     while (1) {

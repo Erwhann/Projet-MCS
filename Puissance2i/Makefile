@@ -2,7 +2,7 @@ CC     = gcc
 CFLAGS = -Wall -Wextra -g -I./commun -I./reseau -I./serveur -I./client
 
 SRCS_SRV = serveur/serveur.c serveur/jeu.c serveur/matchmaking.c \
-           serveur/elo.c serveur/amis.c \
+           serveur/elo.c serveur/amis.c serveur/tournoi.c \
            reseau/session.c reseau/data.c \
            commun/profil.c
 OBJS_SRV = $(SRCS_SRV:.c=.o)

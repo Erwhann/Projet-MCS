@@ -20,6 +20,7 @@ void dessiner_profil(const ClientInfo *moi);
 void dessiner_statut(int statut_actuel);
 void dessiner_choisir_elo(void);
 void dessiner_classement(const PayloadLeaderboard *lb);
+void dessiner_tournoi(const PayloadTournamentState *t);
 void dessiner_notification(const char *msg);
 int saisir_chaine_overlay(const char *invite, char *buf, int maxlen);
 void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
@@ -41,6 +42,7 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
 #define IHM_CHOISIR_ELO   7   
 #define IHM_FRIEND_REQUEST 8 
 #define IHM_CLASSEMENT    9   
+#define IHM_TOURNOI       10  
 
 
 #define COL_TITRE    1

@@ -141,11 +141,12 @@ void dessiner_menu(const ClientInfo *moi) {
     mvprintw(12, 6, " [3]  Changer mon statut");
     mvprintw(13, 6, " [4]  Consulter mon profil");
     mvprintw(14, 6, " [5]  Classement ELO");
-    mvprintw(15, 6, " [0]  Quitter");
+    mvprintw(15, 6, " [6]  Rejoindre un tournoi");
+    mvprintw(16, 6, " [0]  Quitter");
     attroff(COLOR_PAIR(COL_NORMAL));
-    ligne(17);
+    ligne(18);
     attron(COLOR_PAIR(COL_ACCENT));
-    mvprintw(18, 4, "Votre choix :");
+    mvprintw(19, 4, "Votre choix :");
     attroff(COLOR_PAIR(COL_ACCENT));
     refresh();
 }
@@ -392,6 +393,86 @@ void dessiner_classement(const PayloadLeaderboard *lb) {
     refresh();
 }
 
+void dessiner_tournoi(const PayloadTournamentState *t) {
+    const char *etats[] = {"En attente", "Demi-finales", "Finale", "Termine"};
+    int e = (t->etat >= 0 && t->etat <= 3) ? t->etat : 0;
+
+    ecran_effacer();
+    bandeau("              TOURNOI PUISSANCE 2i     ");
+
+    attron(COLOR_PAIR(COL_ACCENT) | A_BOLD);
+    mvprintw(5, 4, "Etat : %s", etats[e]);
+    attroff(COLOR_PAIR(COL_ACCENT) | A_BOLD);
+    attron(COLOR_PAIR(COL_NORMAL));
+    mvprintw(6, 4, "Message : %s", t->msg);
+    attroff(COLOR_PAIR(COL_NORMAL));
+
+    ligne(8);
+    attron(COLOR_PAIR(COL_NORMAL) | A_BOLD);
+    mvprintw(9, 4, "  Participants (%d/%d) :", t->nb_joueurs, MAX_JOUEURS_TOURNOI);
+    attroff(COLOR_PAIR(COL_NORMAL) | A_BOLD);
+    for (int i = 0; i < t->nb_joueurs; i++) {
+        attron(COLOR_PAIR(COL_ACCENT));
+        mvprintw(10 + i, 6, " [%d] %-20s ELO %d", i+1, t->pseudos[i], t->elos[i]);
+        attroff(COLOR_PAIR(COL_ACCENT));
+    }
+
+    if (t->etat >= 1) {
+        ligne(15);
+        attron(COLOR_PAIR(COL_NORMAL) | A_BOLD);
+        mvprintw(16, 4, "  Bracket :");
+        attroff(COLOR_PAIR(COL_NORMAL) | A_BOLD);
+
+        if (t->nb_joueurs >= 2) {
+            attron(COLOR_PAIR(COL_NORMAL));
+            mvprintw(17, 6, "SF1 : %-16s vs %-16s", t->pseudos[0], t->pseudos[1]);
+            if (t->vainqueur_sf1 != 0) {
+                attron(COLOR_PAIR(COL_VAINC) | A_BOLD);
+                const char *v = (t->vainqueur_sf1 == t->elos[0]) ?
+                    t->pseudos[0] : t->pseudos[1];
+                for (int i = 0; i < t->nb_joueurs; i++) {
+                    if (t->elos[i] == t->vainqueur_sf1) { v = t->pseudos[i]; break; }
+                }
+                mvprintw(17, 52, "=> %s", v);
+                attroff(COLOR_PAIR(COL_VAINC) | A_BOLD);
+            }
+            attroff(COLOR_PAIR(COL_NORMAL));
+        }
+
+        if (t->nb_joueurs >= 4) {
+            attron(COLOR_PAIR(COL_NORMAL));
+            mvprintw(18, 6, "SF2 : %-16s vs %-16s", t->pseudos[2], t->pseudos[3]);
+            if (t->vainqueur_sf2 != 0) {
+                attron(COLOR_PAIR(COL_VAINC) | A_BOLD);
+                const char *v = t->pseudos[2];
+                for (int i = 0; i < t->nb_joueurs; i++) {
+                    if (t->elos[i] == t->vainqueur_sf2) { v = t->pseudos[i]; break; }
+                }
+                mvprintw(18, 52, "=> %s", v);
+                attroff(COLOR_PAIR(COL_VAINC) | A_BOLD);
+            }
+            attroff(COLOR_PAIR(COL_NORMAL));
+        }
+        if (t->etat >= 2) {
+            attron(COLOR_PAIR(COL_ACCENT) | A_BOLD);
+            mvprintw(20, 6, "FINALE en cours !");
+            attroff(COLOR_PAIR(COL_ACCENT) | A_BOLD);
+        }
+        if (t->etat == 3 && t->vainqueur_final != 0) {
+            attron(COLOR_PAIR(COL_VAINC) | A_BOLD);
+            mvprintw(21, 6, "*** VAINQUEUR DU TOURNOI : joueur ID %d ***",
+                     t->vainqueur_final);
+            attroff(COLOR_PAIR(COL_VAINC) | A_BOLD);
+        }
+    }
+
+    ligne(23);
+    attron(COLOR_PAIR(COL_NORMAL));
+    mvprintw(24, 4, "[q] Retour menu  (vous serez exclu du tournoi si pas encore commence)");
+    attroff(COLOR_PAIR(COL_NORMAL));
+    refresh();
+}
+
 void dessiner_notification(const char *msg) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
@@ -514,9 +595,42 @@ void traiter_message_serveur(Header *h, void *payload, ClientInfo *moi,
         break;
     }
 
+    case PUSH_TOURNAMENT_STATE: {
+        PayloadTournamentState *pt = (PayloadTournamentState *)payload;
+        if (*etat_ihm != IHM_EN_JEU && *etat_ihm != IHM_FIN_PARTIE) {
+            *etat_ihm = IHM_TOURNOI;
+            dessiner_tournoi(pt);
+        }
+        break;
+    }
+
+    case RES_TOURNAMENT_JOINED: {
+        *etat_ihm = IHM_TOURNOI;
+        ecran_effacer();
+        attron(COLOR_PAIR(COL_TITRE) | A_BOLD);
+        mvprintw(1, 2, "+=============================================+");
+        mvprintw(2, 2, "|        TOURNOI PUISSANCE 2i               |");
+        mvprintw(3, 2, "+=============================================+");
+        attroff(COLOR_PAIR(COL_TITRE) | A_BOLD);
+        attron(COLOR_PAIR(COL_ACCENT) | A_BOLD);
+        mvprintw(6, 4, ">> Inscription reussie !");
+        mvprintw(8, 4, "En attente des autres joueurs...");
+        mvprintw(9, 4, "(Le tournoi demarre automatiquement a 4 joueurs)");
+        attroff(COLOR_PAIR(COL_ACCENT) | A_BOLD);
+        attron(COLOR_PAIR(COL_NORMAL));
+        mvprintw(12, 4, "[q] Retour au menu");
+        attroff(COLOR_PAIR(COL_NORMAL));
+        refresh();
+        break;
+    }
+
+    case RES_TOURNAMENT_ERROR:
+        dessiner_notification("Erreur tournoi : deja lance, deja inscrit, ou complet.");
+        break;
+
     case PUSH_FRIEND_REQUEST: {
         PayloadFriendRequestReceived *prr = (PayloadFriendRequestReceived *)payload;
-        *challenge_en_attente = 2;          /* 2 = demande d'ami (vs 1 = defi) */
+        *challenge_en_attente = 2;          
         *challenger_id = prr->id_demandeur;
         char notif[96];
         snprintf(notif, sizeof(notif),
@@ -602,6 +716,26 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
             break;
         case '5':
             envoyer_message(sock, REQ_LEADERBOARD, NULL, 0);
+            break;
+        case '6':
+            envoyer_message(sock, REQ_JOIN_TOURNAMENT, NULL, 0);
+            *etat_ihm = IHM_TOURNOI;
+            ecran_effacer();
+            attron(COLOR_PAIR(COL_TITRE) | A_BOLD);
+            mvprintw(1, 2, "+=============================================+");
+            mvprintw(2, 2, "|         TOURNOI  PUISSANCE 2i             |");
+            mvprintw(3, 2, "+=============================================+");
+            attroff(COLOR_PAIR(COL_TITRE) | A_BOLD);
+            attron(COLOR_PAIR(COL_ACCENT) | A_BOLD);
+            mvprintw(6, 4, ">> Demande d'inscription envoyee...");
+            mvprintw(8, 4, "En attente de 4 joueurs pour lancer le tournoi.");
+            mvprintw(10, 4, "Le tournoi demarre automatiquement des que 4");
+            mvprintw(11, 4, "joueurs se sont inscrits.");
+            attroff(COLOR_PAIR(COL_ACCENT) | A_BOLD);
+            attron(COLOR_PAIR(COL_NORMAL));
+            mvprintw(14, 4, "[q] Retour au menu");
+            attroff(COLOR_PAIR(COL_NORMAL));
+            refresh();
             break;
         case '0':
             fin_ihm();
@@ -724,8 +858,16 @@ void traiter_saisie(int ch, ClientInfo *moi, PartieInfo *partie,
         }
         break;
 
+    case IHM_TOURNOI:
+        if (ch == 'q' || ch == 'Q') {
+            *etat_ihm = IHM_MENU;
+            dessiner_menu(moi);
+        }
+        break;
+
 
     default:
         break;
     }
 }
+
